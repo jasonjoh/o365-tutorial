@@ -23,7 +23,7 @@ On the command line, change your directory to the `o365-tutorial` sub-directory.
 
 Open a browser and navigate to [http://localhost:3000](http://localhost:3000). You should see the default Ruby on Rails welcome page.
 
-![The default Ruby on Rails welcome page.](https://raw.githubusercontent.com/jasonjoh/office365-azure-guides/master/readme-images/default-ruby-page.PNG)
+![The default Ruby on Rails welcome page.](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/default-ruby-page.PNG)
 
 Now that we've confirmed that Ruby on Rails is working, we're ready to do some real work.
 
@@ -56,7 +56,7 @@ As you can see, our home page will be very simple. For now, the link doesn't do 
 
 Save your changes. Now browsing to [http://localhost:3000](http://localhost:3000) should look like:
 
-![The app's home page.](https://raw.githubusercontent.com/jasonjoh/office365-azure-guides/master/readme-images/home-page.PNG)
+![The app's home page.](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/home-page.PNG)
 
 ## Implementing OAuth2 ##
 
@@ -107,16 +107,19 @@ To get a client ID and secret, we need to [register the app](https://github.com/
 
 - Name: o365-tutorial
 - Type: Web application and/or Web API
-![](https://raw.githubusercontent.com/jasonjoh/office365-azure-guides/master/readme-images/azure-wizard-1.PNG)
+
+![](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/azure-wizard-1.PNG)
 - Sign-on URL: http://localhost:3000
 - App ID URL: https://your_Office365_domain/o365-tutorial (Replace 'your_Office365_domain' with your actual Office 365 domain!)
-![](https://raw.githubusercontent.com/jasonjoh/office365-azure-guides/master/readme-images/azure-wizard-2.PNG)
+
+![](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/azure-wizard-2.PNG)
 
 #### App configuration ####
 
 - Keys: 1 year.
 - Permissions to other applications: Office 365 Exchange Online, Delegated Permissions, "Read user's mail"
-![](https://raw.githubusercontent.com/jasonjoh/office365-azure-guides/master/readme-images/azure-portal-3.PNG)
+
+![](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/azure-portal-3.PNG)
 
 Once this is complete you should have a client ID and a secret. Replace the `<YOUR CLIENT ID>` and `<YOUR CLIENT SECRET>` placeholders with these values and save your changes.
 
@@ -145,7 +148,7 @@ Save your changes and browse to [http://localhost:3000](http://localhost:3000). 
 
 The `<SOME GUID>` portion should match your client ID. Click on the link and (assuming you are not already signed in to Office 365 in your browser), you should be presented with a sign in page:
 
-![The Azure sign-in page.](https://raw.githubusercontent.com/jasonjoh/office365-azure-guides/master/readme-images/azure-sign-in.JPG)
+![The Azure sign-in page.](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/azure-sign-in.PNG)
 
 Sign in with your Office 365 account. Your browser should redirect to back to our app, and you should see a lovely error:
 
@@ -359,7 +362,7 @@ This mirrors the JSON structure for the `From` value:
 
 Save the changes and sign in to the app. You should now see a simple table of messages in your inbox.
 
-![An HTML table displaying the contents of an inbox.](https://raw.githubusercontent.com/jasonjoh/office365-azure-guides/master/readme-images/simple-inbox-listing.PNG)
+![An HTML table displaying the contents of an inbox.](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/simple-inbox-listing.PNG)
 
 ## Next Steps ##
 
