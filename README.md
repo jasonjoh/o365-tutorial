@@ -89,7 +89,7 @@ Open the `.\o365-tutorial\app\helpers\auth_helper.rb` file. We'll start here by 
       def get_login_url
     	client = OAuth2::Client.new(CLIENT_ID,
 	                                CLIENT_SECRET,
-	                                :site => "https://login.windows.net",
+	                                :site => "https://login.microsoftonline.com",
 	                                :authorize_url => "/common/oauth2/authorize",
 	                                :token_url => "/common/oauth2/token")
                                 
@@ -144,7 +144,7 @@ Now that we have actual values in the `get_login_url` function, let's put it to 
 
 Save your changes and browse to [http://localhost:3000](http://localhost:3000). If you hover over the link, it should look like:
 
-    https://login.windows.net/common/oauth2/authorize?client_id=<SOME GUID>&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauthorize&response_type=code
+    https://login.microsoftonline.com/common/oauth2/authorize?client_id=<SOME GUID>&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauthorize&response_type=code
 
 The `<SOME GUID>` portion should match your client ID. Click on the link and (assuming you are not already signed in to Office 365 in your browser), you should be presented with a sign in page:
 
@@ -199,7 +199,7 @@ Let's make one last refinement before we try this new code. Now that we have a r
       def get_login_url
     	client = OAuth2::Client.new(CLIENT_ID,
 	                                CLIENT_SECRET,
-	                                :site => "https://login.windows.net",
+	                                :site => "https://login.microsoftonline.com",
 	                                :authorize_url => "/common/oauth2/authorize",
 	                                :token_url => "/common/oauth2/token")
                                 
@@ -217,7 +217,7 @@ Let's add another helper function to `auth_helper.rb` called `get_token_from_cod
     def get_token_from_code(auth_code)
       client = OAuth2::Client.new(CLIENT_ID,
                                   CLIENT_SECRET,
-                                  :site => "https://login.windows.net",
+                                  :site => "https://login.microsoftonline.com",
                                   :authorize_url => "/common/oauth2/authorize",
                                   :token_url => "/common/oauth2/token")
     

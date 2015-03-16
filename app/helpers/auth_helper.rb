@@ -10,7 +10,7 @@ module AuthHelper
   def get_login_url
     client = OAuth2::Client.new(CLIENT_ID,
                                 CLIENT_SECRET,
-                                :site => "https://login.windows.net",
+                                :site => "https://login.microsoftonline.com",
                                 :authorize_url => "/common/oauth2/authorize",
                                 :token_url => "/common/oauth2/token")
                                 
@@ -21,7 +21,7 @@ module AuthHelper
   def get_token_from_code(auth_code)
     client = OAuth2::Client.new(CLIENT_ID,
                                 CLIENT_SECRET,
-                                :site => "https://login.windows.net",
+                                :site => "https://login.microsoftonline.com",
                                 :authorize_url => "/common/oauth2/authorize",
                                 :token_url => "/common/oauth2/token")
                                 
