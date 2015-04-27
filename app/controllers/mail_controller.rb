@@ -16,7 +16,7 @@ class MailController < ApplicationController
         # Get messages from the inbox
         # Sort by DateTimeReceived in descending orderby
         # Get the first 20 results
-        request.url '/api/v1.0/Me/Messages?$orderby=DateTimeReceived desc&$top=20'
+        request.url '/api/v1.0/Me/Messages?$orderby=DateTimeReceived desc&$select=DateTimeReceived,Subject,From&$top=20'
         request.headers['Authorization'] = "Bearer #{token}"
         request.headers['Accept'] = "application/json"
       end

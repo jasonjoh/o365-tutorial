@@ -298,7 +298,7 @@ Save the file, run `bundle install`, and restart the server. Now we're ready to 
 		    # Get messages from the inbox
 		    # Sort by DateTimeReceived in descending orderby
 		    # Get the first 20 results
-		    request.url '/api/v1.0/Me/Messages?$orderby=DateTimeReceived desc&$top=20'
+		    request.url '/api/v1.0/Me/Messages?$orderby=DateTimeReceived desc&$select=DateTimeReceived,Subject,From&$top=20'
 		    request.headers['Authorization'] = "Bearer #{token}"
 		    request.headers['Accept'] = "application/json"
 	      end
@@ -318,7 +318,7 @@ To summarize the code in the `index` action:
 
 - It creates a connection to the Mail API endpoint, https://outlook.office365.com.
 - It issues a GET request to the URL for inbox messages, with the following characteristics:
-	- It uses the [query string](https://msdn.microsoft.com/office/office365/APi/complex-types-for-mail-contacts-calendar#UseODataqueryparameters) `?$orderby=DateTimeReceived desc&$top=20` to sort the results by DateTimeReceived and limit the results to the first 20.
+	- It uses the [query string](https://msdn.microsoft.com/office/office365/APi/complex-types-for-mail-contacts-calendar#UseODataqueryparameters) `?$orderby=DateTimeReceived desc&$select=DateTimeReceived,Subject,From&$top=20` to sort the results by `DateTimeReceived`, request only the `DateTimeReceived`, `Subject`, and `From` fields, and limit the results to the first 20.
 	- It sets the `Authorization` header to use the access token from Azure.
 	- It sets the `Accept` header to signal that we're expecting JSON.
 - It parses the response body as JSON, and assigns the `value` hash to the `@messages` variable. This variable will be available to the view template.
