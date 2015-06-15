@@ -1,6 +1,6 @@
 # Getting Started with the Outlook Mail API and Ruby on Rails #
 
-[日本 (日本語)](https://github.com/jasonjoh/o365-tutorial/blob/master/loc/readme-ja.md)
+[日本 (日本語)](https://github.com/jasonjoh/o365-tutorial/blob/master/loc/readme-ja.md) (Japanese)
 
 The purpose of this guide is to walk through the process of creating a simple Ruby on Rails app that accesses a user's data in Office 365. The source code in this repository is what you should end up with if you follow the steps outlined here.
 
