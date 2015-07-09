@@ -1,5 +1,7 @@
 # Outlook メール API と Ruby on Rails の使用を開始する #
 
+[日本 (日本語)](https://github.com/jasonjoh/o365-tutorial/blob/master/loc/readme-ja.md) (日本語)
+
 このガイドの目的は、Office 365 でユーザーのデータにアクセスする単純な Ruby on Rails アプリを作成するプロセスを手順を追って説明することです。このリポジトリ内のソースコードは、ここで概説する手順に従った場合の最終結果を示しています。
 
 ## 始める前に ##
