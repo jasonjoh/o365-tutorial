@@ -5,7 +5,7 @@ class MailController < ApplicationController
     token = session[:azure_access_token]
     if token
       # If a token is present in the session, get messages from the inbox
-      conn = Faraday.new(:url => 'https://outlook.office365.com') do |faraday|
+      conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
         # Outputs to the console
         faraday.response :logger
         # Uses the default Net::HTTP adapter

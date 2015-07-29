@@ -1,20 +1,23 @@
 # Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See full license at the bottom of this file.
 module AuthHelper
 
-  # App's client ID. Register the app in Azure AD to get this value.
-  CLIENT_ID = '<YOUR CLIENT ID>'
-  # App's client secret. Register the app in Azure AD to get this value.
-  CLIENT_SECRET = '<YOUR CLIENT SECRET>'
+  # App's client ID. Register the app in Application Registration Portal to get this value.
+  CLIENT_ID = '<YOUR APP ID HERE>'
+  # App's client secret. Register the app in Application Registration Portal to get this value.
+  CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+  
+  # Scopes required by the app
+  SCOPES = [ 'https://outlook.office.com/mail.read' ]
 
   # Generates the login URL for the app.
   def get_login_url
     client = OAuth2::Client.new(CLIENT_ID,
                                 CLIENT_SECRET,
                                 :site => "https://login.microsoftonline.com",
-                                :authorize_url => "/common/oauth2/authorize",
-                                :token_url => "/common/oauth2/token")
+                                :authorize_url => "/common/oauth2/v2.0/authorize",
+                                :token_url => "/common/oauth2/v2.0/token")
                                 
-    login_url = client.auth_code.authorize_url(:redirect_uri => authorize_url)
+    login_url = client.auth_code.authorize_url(:redirect_uri => authorize_url, :scope => SCOPES.join(' '))
   end
   
   # Exchanges an authorization code for a token
@@ -22,12 +25,12 @@ module AuthHelper
     client = OAuth2::Client.new(CLIENT_ID,
                                 CLIENT_SECRET,
                                 :site => "https://login.microsoftonline.com",
-                                :authorize_url => "/common/oauth2/authorize",
-                                :token_url => "/common/oauth2/token")
+                                :authorize_url => "/common/oauth2/v2.0/authorize",
+                                :token_url => "/common/oauth2/v2.0/token")
                                 
     token = client.auth_code.get_token(auth_code,
                                        :redirect_uri => authorize_url,
-                                       :resource => 'https://outlook.office365.com')
+                                       :scope => SCOPES.join(' '))
                                          
     access_token = token.token
   end

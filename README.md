@@ -2,14 +2,14 @@
 
 [日本 (日本語)](https://github.com/jasonjoh/o365-tutorial/blob/master/loc/readme-ja.md) (Japanese)
 
-The purpose of this guide is to walk through the process of creating a simple Ruby on Rails app that accesses a user's data in Office 365. The source code in this repository is what you should end up with if you follow the steps outlined here.
+The purpose of this guide is to walk through the process of creating a simple Ruby on Rails app that accesses a user's data in Office 365 or Outlook.com. The source code in this repository is what you should end up with if you follow the steps outlined here.
 
 ## Before you begin ##
 
 This guide assumes:
 
 - That you already have Ruby on Rails installed and working on your development machine. 
-- That you have an Office 365 tenant, with access to an administrator account in that tenant.
+- That you have an Office 365 tenant, with access to an account in that tenant **OR** an Outlook.com developer preview account.
 
 ## Create the app ##
 
@@ -31,7 +31,7 @@ Now that we've confirmed that Ruby on Rails is working, we're ready to do some r
 
 ## Designing the app ##
 
-Our app will be very simple. When a user visits the site, they will see a link to log in and view their email. Clicking that link will take them to the Azure login page where they can login with their Office 365 account and grant access to our app. Finally, they will be redirected back to our app, which will display a list of the most recent email in the user's inbox.
+Our app will be very simple. When a user visits the site, they will see a link to log in and view their email. Clicking that link will take them to the Azure login page where they can login with their Office 365 or Outlook.com account and grant access to our app. Finally, they will be redirected back to our app, which will display a list of the most recent email in the user's inbox.
 
 Let's begin by replacing the default welcome page with a page of our own. To do that, we'll modify the application controller, located in the `.\o365-tutorial\app\controllers\application_controller.rb` file. Open this file in your favorite text editor. Let's define a `home` action that renders a very simple bit of HTML, as shown in the following listing:
 
@@ -80,10 +80,13 @@ Open the `.\o365-tutorial\app\helpers\auth_helper.rb` file. We'll start here by 
 
     module AuthHelper
     
-      # App's client ID. Register the app in Azure AD to get this value.
-      CLIENT_ID = '<YOUR CLIENT ID>'
-      # App's client secret. Register the app in Azure AD to get this value.
-      CLIENT_SECRET = '<YOUR CLIENT SECRET>'
+      # App's client ID. Register the app in Application Registration Portal to get this value.
+      CLIENT_ID = '<YOUR APP ID HERE>'
+      # App's client secret. Register the app in Application Registration Portal to get this value.
+      CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+
+	  # Scopes required by the app
+	  SCOPES = [ 'https://outlook.office.com/mail.read' ]
       
       REDIRECT_URI = 'http://localhost:3000/authorize' # Temporary!
     
@@ -92,38 +95,32 @@ Open the `.\o365-tutorial\app\helpers\auth_helper.rb` file. We'll start here by 
     	client = OAuth2::Client.new(CLIENT_ID,
 	                                CLIENT_SECRET,
 	                                :site => "https://login.microsoftonline.com",
-	                                :authorize_url => "/common/oauth2/authorize",
-	                                :token_url => "/common/oauth2/token")
+	                                :authorize_url => "/common/oauth2/v2.0/authorize",
+	                                :token_url => "/common/oauth2/v2.0/token")
                                 
-    	login_url = client.auth_code.authorize_url(:redirect_uri => REDIRECT_URI)
+    	login_url = client.auth_code.authorize_url(:redirect_uri => REDIRECT_URI, :scope => SCOPES.join(' '))
       end
     end
 
-The first thing we do here is define our client ID and secret. We also define a redirect URI as a hard-coded value. We'll improve on that in a bit, but it will serve our purpose for now. Now we need to generate values for the client ID and secret.
+The first thing we do here is define our client ID and secret, and the permission scopes our app requires. We also define a redirect URI as a hard-coded value. We'll improve on that in a bit, but it will serve our purpose for now. Now we need to generate values for the client ID and secret.
 
 ### Generate a client ID and secret ###
 
-To get a client ID and secret, we need to [register the app](https://github.com/jasonjoh/office365-azure-guides/blob/master/RegisterAnAppInAzure.md). Use the following details to register.
+Head over to https://apps.dev.microsoft.com to quickly get a client ID and secret. Using the sign in buttons, sign in with either your Microsoft account (Outlook.com), or your work or school account (Office 365).
 
-#### Create parameters ####
+![The Application Registration Portal Sign In Page](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/sign-in.PNG)
 
-- Name: o365-tutorial
-- Type: Web application and/or Web API
+Once you're signed in, click the **Add an app** button. Enter `o365-tutorial` for the name and click **Create application**. After the app is created, locate the **Application Secrets** section, and click the **Generate New Password** button. Copy the password now and save it to a safe place. Once you've copied the password, click **Ok**.
 
-![](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/azure-wizard-1.PNG)
-- Sign-on URL: http://localhost:3000
-- App ID URL: https://your_Office365_domain/o365-tutorial (Replace 'your_Office365_domain' with your actual Office 365 domain!)
+![The new password dialog.](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/new-password.PNG)
 
-![](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/azure-wizard-2.PNG)
+Locate the **Platforms** section, and click **Add Platform**. Choose **Web**, then enter `http://localhost:3000/authorize` under **Redirect URIs**. Click **Save** to complete the registration. Copy the **Application Id** and save it along with the password you copied earlier. We'll need those values soon.
 
-#### App configuration ####
+Here's what the details of your app registration should look like when you are done.
 
-- Keys: 1 year.
-- Permissions to other applications: Office 365 Exchange Online, Delegated Permissions, "Read user's mail"
+![The completed registration properties.](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/ruby-tutorial.PNG)
 
-![](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/azure-portal-3.PNG)
-
-Once this is complete you should have a client ID and a secret. Replace the `<YOUR CLIENT ID>` and `<YOUR CLIENT SECRET>` placeholders with these values and save your changes.
+Once this is complete you should have a client ID and a secret. Replace the `<YOUR APP ID HERE>` and `<YOUR APP PASSWORD HERE>` placeholders with these values and save your changes.
 
 ### Back to coding ###
 
@@ -146,9 +143,9 @@ Now that we have actual values in the `get_login_url` function, let's put it to 
 
 Save your changes and browse to [http://localhost:3000](http://localhost:3000). If you hover over the link, it should look like:
 
-    https://login.microsoftonline.com/common/oauth2/authorize?client_id=<SOME GUID>&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauthorize&response_type=code
+    https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=<SOME GUID>&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauthorize&response_type=code&scope=https%3A%2F%2Foutlook.office.com%2Fmail.read
 
-The `<SOME GUID>` portion should match your client ID. Click on the link and (assuming you are not already signed in to Office 365 in your browser), you should be presented with a sign in page:
+The `<SOME GUID>` portion should match your client ID. Click on the link and you should be presented with a sign in page:
 
 ![The Azure sign-in page.](https://raw.githubusercontent.com/jasonjoh/o365-tutorial/master/readme-images/azure-sign-in.PNG)
 
@@ -159,8 +156,7 @@ Sign in with your Office 365 account. Your browser should redirect to back to ou
 If you scroll down on Rails' error page, you can see the request parameters, which include the authorization code.
 
     Parameters:
-	{"code"=>"AAABAAAAvPM1KaPlrEqdFSBzjqfTGPpcGZKd6RU5DuxG25u809qmosT...",
-	 "session_state"=>"2be8576c-534b-4bc2-8ac2-0839270b9e07"}
+	{"code"=>"M2ff0cb19-ec9d-db94-c5ab-4c634e319315"}
 
 The reason we're seeing the error is because we haven't implemented a route to handle the `/authorize` path we hard-coded as our redirect URI. However, Rails has shown us that we're getting the authorization code back in the request, so we're on the right track! Let's fix that error now.
 
@@ -192,20 +188,23 @@ Let's make one last refinement before we try this new code. Now that we have a r
 
     module AuthHelper
     
-      # App's client ID. Register the app in Azure AD to get this value.
-      CLIENT_ID = '<YOUR CLIENT ID>'
-      # App's client secret. Register the app in Azure AD to get this value.
-      CLIENT_SECRET = '<YOUR CLIENT SECRET>'
+      # App's client ID. Register the app in Application Registration Portal to get this value.
+      CLIENT_ID = '<YOUR APP ID HERE>'
+      # App's client secret. Register the app in Application Registration Portal to get this value.
+      CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+
+	  # Scopes required by the app
+	  SCOPES = [ 'https://outlook.office.com/mail.read' ]
     
       # Generates the login URL for the app.
       def get_login_url
     	client = OAuth2::Client.new(CLIENT_ID,
 	                                CLIENT_SECRET,
 	                                :site => "https://login.microsoftonline.com",
-	                                :authorize_url => "/common/oauth2/authorize",
-	                                :token_url => "/common/oauth2/token")
+	                                :authorize_url => "/common/oauth2/v2.0/authorize",
+	                                :token_url => "/common/oauth2/v2.0/token")
                                 
-    	login_url = client.auth_code.authorize_url(:redirect_uri => authorize_url)
+    	login_url = client.auth_code.authorize_url(:redirect_uri => authorize_url, :scope => SCOPES.join(' '))
       end
     end
 
@@ -225,7 +224,7 @@ Let's add another helper function to `auth_helper.rb` called `get_token_from_cod
     
       token = client.auth_code.get_token(auth_code,
                                          :redirect_uri => authorize_url,
-                                         :resource => 'https://outlook.office365.com')
+                                         :scope => SCOPES.join(' '))
      
       access_token = token.token
     end
@@ -242,9 +241,9 @@ Let's make sure that works. Modify the `gettoken` action in the `auth_controller
       end
     end
 
-If you save your changes and go through the sign-in process again, you should now see a long string of seemingly nonsensical characters. If everything's gone according to plan, that should be an access token. Copy the entire value and head over to http://jwt.calebb.net/. If you paste that value in, you should see a JSON representation of an access token. For details and alternative parsers, see [Validating your Office 365 Access Token](https://github.com/jasonjoh/office365-azure-guides/blob/master/ValidatingYourToken.md).
+If you save your changes and go through the sign-in process again, you should now see a long string of seemingly nonsensical characters. If everything's gone according to plan, that should be an access token.
 
-Once you're convinced that the token is what it should be, let's change our code to store the token in a session cookie instead of displaying it.
+Now let's change our code to store the token in a session cookie instead of displaying it.
 
 #### New version of `gettoken` action ####
     def gettoken
@@ -289,7 +288,7 @@ Save the file, run `bundle install`, and restart the server. Now we're ready to 
     	token = session[:azure_access_token]
     	if token
 	      # If a token is present in the session, get messages from the inbox
-	      conn = Faraday.new(:url => 'https://outlook.office365.com') do |faraday|
+	      conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
 		    # Outputs to the console
 		    faraday.response :logger
 		    # Uses the default Net::HTTP adapter
@@ -318,7 +317,7 @@ Save the file, run `bundle install`, and restart the server. Now we're ready to 
 
 To summarize the code in the `index` action:
 
-- It creates a connection to the Mail API endpoint, https://outlook.office365.com.
+- It creates a connection to the Mail API endpoint, https://outlook.office.com.
 - It issues a GET request to the URL for inbox messages, with the following characteristics:
 	- It uses the [query string](https://msdn.microsoft.com/office/office365/APi/complex-types-for-mail-contacts-calendar#UseODataqueryparameters) `?$orderby=DateTimeReceived desc&$select=DateTimeReceived,Subject,From&$top=20` to sort the results by `DateTimeReceived`, request only the `DateTimeReceived`, `Subject`, and `From` fields, and limit the results to the first 20.
 	- It sets the `Authorization` header to use the access token from Azure.
