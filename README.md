@@ -212,8 +212,6 @@ Let's make one last refinement before we try this new code. Now that we have a r
 
 Refresh your browser (or repeat the sign-in process). Now instead of a Rails error page, you should see the value of the authorization code printed on the screen. We're getting closer, but that's still not very useful. Let's actually do something with that code.
 
-### Exchanging the code for a token ###
-
 Let's add another helper function to `auth_helper.rb` called `get_token_from_code`.
 
 #### `get_token_from_code` in the `.\o365-tutorial\app\helpers\auth_helper.rb` file ####
