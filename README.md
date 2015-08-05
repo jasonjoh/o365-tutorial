@@ -86,7 +86,8 @@ Open the `.\o365-tutorial\app\helpers\auth_helper.rb` file. We'll start here by 
       CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
 
 	  # Scopes required by the app
-	  SCOPES = [ 'https://outlook.office.com/mail.read' ]
+	  SCOPES = [ 'openid',
+				 'https://outlook.office.com/mail.read' ]
       
       REDIRECT_URI = 'http://localhost:3000/authorize' # Temporary!
     
@@ -94,9 +95,9 @@ Open the `.\o365-tutorial\app\helpers\auth_helper.rb` file. We'll start here by 
       def get_login_url
     	client = OAuth2::Client.new(CLIENT_ID,
 	                                CLIENT_SECRET,
-	                                :site => "https://login.microsoftonline.com",
-	                                :authorize_url => "/common/oauth2/v2.0/authorize",
-	                                :token_url => "/common/oauth2/v2.0/token")
+	                                :site => 'https://login.microsoftonline.com',
+	                                :authorize_url => '/common/oauth2/v2.0/authorize',
+	                                :token_url => '/common/oauth2/v2.0/token')
                                 
     	login_url = client.auth_code.authorize_url(:redirect_uri => REDIRECT_URI, :scope => SCOPES.join(' '))
       end
@@ -143,7 +144,7 @@ Now that we have actual values in the `get_login_url` function, let's put it to 
 
 Save your changes and browse to [http://localhost:3000](http://localhost:3000). If you hover over the link, it should look like:
 
-    https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=<SOME GUID>&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauthorize&response_type=code&scope=https%3A%2F%2Foutlook.office.com%2Fmail.read
+    https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=<SOME GUID>&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauthorize&response_type=code&scope=openid+https%3A%2F%2Foutlook.office.com%2Fmail.read
 
 The `<SOME GUID>` portion should match your client ID. Click on the link and you should be presented with a sign in page:
 
@@ -194,7 +195,8 @@ Let's make one last refinement before we try this new code. Now that we have a r
       CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
 
 	  # Scopes required by the app
-	  SCOPES = [ 'https://outlook.office.com/mail.read' ]
+	  SCOPES = [ 'openid',
+				 'https://outlook.office.com/mail.read' ]
     
       # Generates the login URL for the app.
       def get_login_url
@@ -210,26 +212,61 @@ Let's make one last refinement before we try this new code. Now that we have a r
 
 Refresh your browser (or repeat the sign-in process). Now instead of a Rails error page, you should see the value of the authorization code printed on the screen. We're getting closer, but that's still not very useful. Let's actually do something with that code.
 
+### Exchanging the code for a token ###
+
 Let's add another helper function to `auth_helper.rb` called `get_token_from_code`.
 
-#### `get_token_from_code` in the .\o365-tutorial\app\helpers\auth_helper.rb file ####
+#### `get_token_from_code` in the `.\o365-tutorial\app\helpers\auth_helper.rb` file ####
 
     # Exchanges an authorization code for a token
     def get_token_from_code(auth_code)
       client = OAuth2::Client.new(CLIENT_ID,
                                   CLIENT_SECRET,
-                                  :site => "https://login.microsoftonline.com",
-                                  :authorize_url => "/common/oauth2/v2.0/authorize",
-                                  :token_url => "/common/oauth2/v2.0/token")
+                                  :site => 'https://login.microsoftonline.com',
+                                  :authorize_url => '/common/oauth2/v2.0/authorize',
+                                  :token_url => '/common/oauth2/v2.0/token')
     
       token = client.auth_code.get_token(auth_code,
                                          :redirect_uri => authorize_url,
                                          :scope => SCOPES.join(' '))
-     
-      access_token = token.token
     end
 
-Let's make sure that works. Modify the `gettoken` action in the `auth_controller.rb` file to use this helper function and display the return value.
+### Getting the user's email address ###
+
+The JSON array returned from `get_token_from_code` doesn't just include the access token. It also includes an ID token. We can use this token to find out a few pieces of information about the logged on user. In this case, we want to get the user's email address. You'll see why we want this soon.
+
+Add a new function `get_email_from_id_token` to `auth_helper.rb`.
+
+#### `get_email_from_id_token` in the `.\o365-tutorial\app\helpers\auth_helper.rb` file ####
+
+	# Parses an ID token and returns the user's email
+	def get_email_from_id_token(id_token)
+
+	  # JWT is in three parts, separated by a '.'
+	  token_parts = id_token.split('.')
+	  # Token content is in the second part
+	  encoded_token = token_parts[1]
+		
+	  # It's base64, but may not be padded
+	  # Fix padding so Base64 module can decode
+	  leftovers = token_parts[1].length.modulo(4)
+	  if leftovers == 2
+	    encoded_token += '=='
+	  elsif leftovers == 3
+	    encoded_token += '='
+	  end
+		
+	  # Base64 decode (urlsafe version)
+	  decoded_token = Base64.urlsafe_decode64(encoded_token)
+	
+	  # Load into a JSON object
+	  jwt = JSON.parse(decoded_token)
+	 
+	  # Email is in the 'preferred_username' field
+	  email = jwt['preferred_username']
+	end
+
+Let's make sure that works. Modify the `gettoken` action in the `auth_controller.rb` file to use these helper functions and display the return values.
 
 #### Updated contents of the `.\o365-tutorial\app\controllers\auth_controller.rb` file ####
 
@@ -237,18 +274,20 @@ Let's make sure that works. Modify the `gettoken` action in the `auth_controller
     
       def gettoken
     	token = get_token_from_code params[:code]
-    	render text: token
+		email = get_email_from_id_token token.params['id_token']
+    	render text: "Email: #{email}, TOKEN: #{token.token}"
       end
     end
 
-If you save your changes and go through the sign-in process again, you should now see a long string of seemingly nonsensical characters. If everything's gone according to plan, that should be an access token.
+If you save your changes and go through the sign-in process again, you should now see the user's email followed by a long string of seemingly nonsensical characters. If everything's gone according to plan, that should be an access token.
 
-Now let's change our code to store the token in a session cookie instead of displaying it.
+Now let's change our code to store the token and email in a session cookie instead of displaying them.
 
 #### New version of `gettoken` action ####
     def gettoken
       token = get_token_from_code params[:code]
-      session[:azure_access_token] = token
+      session[:azure_access_token] = token.token
+      session[:user_email] = get_email_from_id_token token.params['id_token']
       render text: "Access token saved in session cookie."
     end
 
@@ -267,6 +306,7 @@ Now we can modify the `gettoken` action one last time to redirect to the index a
     def gettoken
       token = get_token_from_code params[:code]
       session[:azure_access_token] = token
+      session[:user_email] = get_email_from_id_token token.params['id_token']
       redirect_to mail_index_url
     end
 
@@ -286,6 +326,7 @@ Save the file, run `bundle install`, and restart the server. Now we're ready to 
 
       def index
     	token = session[:azure_access_token]
+		email = session[:user_email]
     	if token
 	      # If a token is present in the session, get messages from the inbox
 	      conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
@@ -301,7 +342,8 @@ Save the file, run `bundle install`, and restart the server. Now we're ready to 
 		    # Get the first 20 results
 		    request.url '/api/v1.0/Me/Messages?$orderby=DateTimeReceived desc&$select=DateTimeReceived,Subject,From&$top=20'
 		    request.headers['Authorization'] = "Bearer #{token}"
-		    request.headers['Accept'] = "application/json"
+		    request.headers['Accept'] = 'application/json'
+		    request.headers['X-AnchorMailbox'] = email
 	      end
 	      
 		  # Assign the resulting value to the @messages
@@ -322,6 +364,7 @@ To summarize the code in the `index` action:
 	- It uses the [query string](https://msdn.microsoft.com/office/office365/APi/complex-types-for-mail-contacts-calendar#UseODataqueryparameters) `?$orderby=DateTimeReceived desc&$select=DateTimeReceived,Subject,From&$top=20` to sort the results by `DateTimeReceived`, request only the `DateTimeReceived`, `Subject`, and `From` fields, and limit the results to the first 20.
 	- It sets the `Authorization` header to use the access token from Azure.
 	- It sets the `Accept` header to signal that we're expecting JSON.
+	- It sets the `X-AnchorMailbox` header to the user's email address. Setting this header allows the API endpoint to route API calls to the appropriate backend mailbox server more efficiently.
 - It parses the response body as JSON, and assigns the `value` hash to the `@messages` variable. This variable will be available to the view template.
 
 ### Displaying the results ###

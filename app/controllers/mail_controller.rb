@@ -3,6 +3,7 @@ class MailController < ApplicationController
 
   def index
     token = session[:azure_access_token]
+    email = session[:user_email]
     if token
       # If a token is present in the session, get messages from the inbox
       conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
@@ -18,7 +19,8 @@ class MailController < ApplicationController
         # Get the first 20 results
         request.url '/api/v1.0/Me/Messages?$orderby=DateTimeReceived desc&$select=DateTimeReceived,Subject,From&$top=20'
         request.headers['Authorization'] = "Bearer #{token}"
-        request.headers['Accept'] = "application/json"
+        request.headers['Accept'] = 'application/json'
+        request.headers['X-AnchorMailbox'] = email
       end
       
       @messages = JSON.parse(response.body)['value']
