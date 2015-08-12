@@ -12,11 +12,10 @@ This guide assumes:
 - That you have an Office 365 tenant, with access to an administrator account in that tenant.
 
 ## Run the app ##
-If you've downloaded this sample from http://dev.office.com/getting-started/office365apis,  run `bundle install`. Then start the server by running `rails server` and navigate to http://localhost:3000.
 
+If you've downloaded this sample from http://dev.office.com/getting-started/office365apis, and you signed in and registered the app, you're all set! The download already includes the client ID and secret. Run `bundle install`. Then start the server by running `rails server` and navigate to http://localhost:3000.
 
-Note: If you did not sign in and register your app through dev.office.com, you will need to update your auth creds in the sample prior to running it.
-
+If you downloaded without signing in, or you downloaded directly from GitHub, then you'll need to follow the steps in **Implementing OAuth2** to register your app and get a client ID and secret.
 
 ## Or, create the app ##
 
