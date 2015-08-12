@@ -11,7 +11,14 @@ This guide assumes:
 - That you already have Ruby on Rails installed and working on your development machine. 
 - That you have an Office 365 tenant, with access to an administrator account in that tenant.
 
-## Create the app ##
+## Run the app ##
+If you've downloaded this sample from http://dev.office.com/getting-started/office365apis,  run `bundle install`. Then start the server by running `rails server` and navigate to http://localhost:3000.
+
+
+Note: If you did not sign in and register your app through dev.office.com, you will need to update your auth creds in the sample prior to running it.
+
+
+## Or, create the app ##
 
 Let's dive right in! From your command line, change your directory to a directory where you want to create your new Ruby on Rails app. Run the following command to create an app called `o365-tutorial` (**Note:** feel free to change the name to whatever you want. For the purposes of this guide I will assume the name of the app is `o365-tutorial`.):
 
