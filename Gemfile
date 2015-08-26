@@ -36,8 +36,15 @@ gem 'sdoc', '~> 0.4.0', group: :doc
 # gem 'capistrano-rails', group: :development
 
 group :development, :test do
-  # Swapping debugger for byebug due to ruby v2 breakage
-  gem 'byebug'
+  # Check version. byebug works with version 2.*, but not with 1.*
+  # debugger works with 1.*, but not with 2.*
+  if RUBY_VERSION.start_with?('2')
+    # Call 'byebug' anywhere in the code to stop execution and get a debugger console
+    gem 'byebug'
+  else
+    # Call 'debugger' anywhere in the code to stop execution and get a debugger console
+    gem 'debugger'
+  end
 
   # Access an IRB console on exception pages or by using <%= console %> in views
   gem 'web-console', '~> 2.0'
