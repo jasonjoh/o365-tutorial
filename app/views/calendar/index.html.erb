@@ -1,0 +1,15 @@
+<h1>My events</h1>
+<table>
+  <tr>
+    <th>Subject</th>
+    <th>Start</th>
+    <th>End</th>
+  </tr>
+  <% @events.each do |event| %>
+    <tr>
+      <td><%= event['Subject'] %></td>
+      <td><%= event['Start'] %></td>
+      <td><%= event['End'] %></td>
+    </tr>
+  <% end %>
+</table>
