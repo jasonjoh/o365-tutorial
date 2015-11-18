@@ -15,9 +15,9 @@ class MailController < ApplicationController
       
       response = conn.get do |request|
         # Get messages from the inbox
-        # Sort by DateTimeReceived in descending orderby
+        # Sort by ReceivedDateTime in descending orderby
         # Get the first 20 results
-        request.url '/api/v1.0/Me/Messages?$orderby=DateTimeReceived desc&$select=DateTimeReceived,Subject,From&$top=20'
+        request.url '/api/v2.0/Me/Messages?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20'
         request.headers['Authorization'] = "Bearer #{token}"
         request.headers['Accept'] = 'application/json'
         request.headers['X-AnchorMailbox'] = email

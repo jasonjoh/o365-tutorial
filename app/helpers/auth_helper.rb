@@ -2,13 +2,15 @@
 module AuthHelper
 
   # App's client ID. Register the app in Application Registration Portal to get this value.
-  CLIENT_ID = '<YOUR APP ID HERE>'
+  CLIENT_ID = 'fae5ba6e-41d4-4f63-8dc7-916182335e42'
   # App's client secret. Register the app in Application Registration Portal to get this value.
-  CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+  CLIENT_SECRET = 'FT3JjBBc0xaJUVngBTEn80X'
   
   # Scopes required by the app
   SCOPES = [ 'openid', 
-             'https://outlook.office.com/mail.read' ]
+             'https://outlook.office.com/mail.read',
+             'https://outlook.office.com/calendars.read',
+             'https://outlook.office.com/contacts.read' ]
 
   # Generates the login URL for the app.
   def get_login_url
