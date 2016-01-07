@@ -336,9 +336,9 @@ REST を呼び出すには、[Faraday gem](https://github.com/lostisland/faraday
 	      
 	      response = conn.get do |request|
 		    # Get messages from the inbox
-		    # Sort by DateTimeReceived in descending orderby
+		    # Sort by ReceivedDateTime in descending orderby
 		    # Get the first 20 results
-		    request.url '/api/v1.0/Me/Messages?$orderby=DateTimeReceived desc&$select=DateTimeReceived,Subject,From&$top=20'
+		    request.url '/api/v2.0/Me/Messages?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20'
 		    request.headers['Authorization'] = "Bearer #{token}"
 		    request.headers['Accept'] = 'application/json'
 		    request.headers['X-AnchorMailbox'] = email
@@ -358,9 +358,9 @@ REST を呼び出すには、[Faraday gem](https://github.com/lostisland/faraday
 `index` アクションのコードの実行内容をまとめると、次のようになります。
 
 - メール API のエンドポイント (https://outlook.office.com) への接続を作成します。
-- 次の特性を持つ受信トレイのメッセージの URL に、GET 要求を発行します。
-	- [クエリ文字列](https://msdn.microsoft.com/office/office365/APi/complex-types-for-mail-contacts-calendar#UseODataqueryparameters) `?$orderby=DateTimeReceived desc&$select=DateTimeReceived,Subject,From&$top=20` を使用して、結果を `DateTimeReceived` で並べ替えます。また、[`DateTimeReceived`]、[`Subject`]、および [`From`] の各フィールドのみを要求し、結果を最初の 20 個に制限します。
-	- `Authorization` ヘッダーを、Azure からアクセス トークンを使用するように設定します。
+- 受信トレイのメッセージの URL に、次の特性を持つ GET 要求を発行します。
+	- [クエリ文字列](https://msdn.microsoft.com/office/office365/APi/complex-types-for-mail-contacts-calendar#UseODataqueryparameters) `?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20` を使用して、結果を `ReceivedDateTime` で並べ替えます。また、[`ReceivedDateTime`]、[`Subject`]、[`From`] の各フィールドのみを要求し、結果を最初の 20 個に制限します。
+	- `Authorization` ヘッダーを、Azure からのアクセス トークンを使用するように設定します。
 	- `Accept` ヘッダーを、JSON が必要とされていることを通知するように設定します。
 	- `X-AnchorMailbox`ヘッダーを、ユーザーの電子メール アドレスに設定します。このヘッダーの設定により、API エンドポイントが、API 呼び出しを適切なバックエンド メールボックス サーバーへ、より効率的にルーティングされます。
 - JSON として応答本体を解析し、`value` のハッシュを `@messages` 変数に割り当てます。この変数は、ビュー テンプレートで使用可能になります。
@@ -382,7 +382,7 @@ REST を呼び出すには、[Faraday gem](https://github.com/lostisland/faraday
 	    <tr>
 	      <td><%= message['From']['EmailAddress']['Name'] %></td>
 	      <td><%= message['Subject'] %></td>
-	      <td><%= message['DateTimeReceived'] %></td>
+	      <td><%= message['ReceivedDateTime'] %></td>
 	    </tr>
       <% end %>
     </table>
@@ -418,4 +418,3 @@ Copyright (c) Microsoft. All rights reserved.
 Twitter ([@JasonJohMSFT](https://twitter.com/JasonJohMSFT)) をぜひフォローしてください。
 
 [Exchange 開発ブログ](http://blogs.msdn.com/b/exchangedev/)をフォローする
-
