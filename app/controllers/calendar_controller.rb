@@ -15,7 +15,7 @@ class CalendarController < ApplicationController
         # Get events from the calendar
         # Sort by Start in ascending orderby
         # Get the first 10 results
-        request.url '/api/v2.0/Me/Events?$orderby=Start asc&$select=Subject,Start,End&$top=10'
+        request.url '/api/v2.0/Me/Events?$orderby=Start/DateTime asc&$select=Subject,Start,End&$top=10'
         request.headers['Authorization'] = "Bearer #{token}"
         request.headers['Accept'] = "application/json"
         request.headers['X-AnchorMailbox'] = email
