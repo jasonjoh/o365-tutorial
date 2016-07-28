@@ -17,6 +17,7 @@ gem 'coffee-rails', '~> 4.2'
 # gem 'therubyracer', platforms: :ruby
 
 gem 'oauth2'
+gem 'activerecord-session_store'
 gem 'faraday'
 
 # Use jquery as the JavaScript library

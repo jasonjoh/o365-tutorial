@@ -1,6 +1,9 @@
 class ContactsController < ApplicationController
+
+  include AuthHelper
+  
   def index
-    token = session[:azure_access_token]
+    token = get_access_token
     email = session[:user_email]
     if token
       # If a token is present in the session, get messages from the inbox

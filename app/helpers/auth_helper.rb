@@ -8,6 +8,7 @@ module AuthHelper
   
   # Scopes required by the app
   SCOPES = [ 'openid',
+             'offline_access',
              'https://outlook.office.com/mail.read',
              'https://outlook.office.com/calendars.read',
              'https://outlook.office.com/contacts.read' ]
@@ -34,6 +35,30 @@ module AuthHelper
     token = client.auth_code.get_token(auth_code,
                                        :redirect_uri => authorize_url,
                                        :scope => SCOPES.join(' '))
+  end
+
+  # Gets the current access token
+  def get_access_token
+    # Get the current token hash from session
+    token_hash = session[:azure_token]
+
+    client = OAuth2::Client.new(CLIENT_ID,
+                                CLIENT_SECRET,
+                                :site => 'https://login.microsoftonline.com',
+                                :authorize_url => '/common/oauth2/v2.0/authorize',
+                                :token_url => '/common/oauth2/v2.0/token')
+
+    token = OAuth2::AccessToken.from_hash(client, token_hash)
+
+    # Check if token is expired, refresh if so
+    if token.expired?
+      new_token = token.refresh!
+      # Save new token
+      session[:azure_token] = new_token.to_hash
+      access_token = new_token.token
+    else
+      access_token = token.token
+    end
   end
 
   # Gets the user's email from the /Me endpoint

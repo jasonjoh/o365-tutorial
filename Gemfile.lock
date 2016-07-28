@@ -33,6 +33,12 @@ GEM
       activemodel (= 5.0.0)
       activesupport (= 5.0.0)
       arel (~> 7.0)
+    activerecord-session_store (1.0.0)
+      actionpack (>= 4.0, < 5.1)
+      activerecord (>= 4.0, < 5.1)
+      multi_json (~> 1.11, >= 1.11.2)
+      rack (>= 1.5.2, < 3)
+      railties (>= 4.0, < 5.1)
     activesupport (5.0.0)
       concurrent-ruby (~> 1.0, >= 1.0.2)
       i18n (~> 0.7)
@@ -164,6 +170,7 @@ PLATFORMS
   x86-mingw32
 
 DEPENDENCIES
+  activerecord-session_store
   byebug
   coffee-rails (~> 4.2)
   faraday

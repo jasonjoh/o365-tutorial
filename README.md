@@ -66,13 +66,23 @@ Save your changes. Now browsing to [http://localhost:3000](http://localhost:3000
 
 ## Implementing OAuth2 ##
 
-Our goal in this section is to make the link on our home page initiate the [OAuth2 Authorization Code Grant flow with Azure AD](https://msdn.microsoft.com/en-us/library/azure/dn645542.aspx). To make things easier, we'll use the [oauth2 gem](https://github.com/intridea/oauth2) to handle our OAuth requests. Open the `./o365-tutorial/GemFile` and add the following line anywhere in that file:
+Our goal in this section is to make the link on our home page initiate the [OAuth2 Authorization Code Grant flow with Azure AD](https://msdn.microsoft.com/en-us/library/azure/dn645542.aspx). To make things easier, we'll use the [oauth2 gem](https://github.com/intridea/oauth2) to handle our OAuth requests. We'll also use the [activerecord-session_store gem](https://github.com/rails/activerecord-session_store) to store our sessions in a database. Open the `./o365-tutorial/GemFile` and add the following lines anywhere in that file:
 
     gem 'oauth2'
+    gem 'activerecord-session_store'
 
 Save the file and run the following command (restart the rails server afterwards):
 
     bundle install
+
+Now let's configure the app to use the `activerecord-session_store` gem for session storage. The reason for this is that the default cookie store is limited to 4KB of data, which isn't enough for us to store the tokens we'll get back from Azure.
+
+Open the `.\o365-tutorial\config\initializers\session_store.rb` file. Replace the text `:cookie_store` with `:active_record_store`.
+
+On the command line, enter the following commands to generate the session database.
+
+    rails generate active_record:session_migration
+    rails db:migrate
 
 Because of the nature of the OAuth2 flow, it makes sense to create a controller to handle the redirects from Azure. Run the following command to generate a controller named `Auth`:
 
@@ -298,9 +308,52 @@ Now let's change our code to store the token and email in a session cookie inste
 ```ruby
 def gettoken
   token = get_token_from_code params[:code]
-  session[:azure_access_token] = token.token
+  session[:azure_token] = token.to_hash
   session[:user_email] = get_user_email token.token
   render text: "Access token saved in session cookie."
+end
+```
+
+### Refreshing the access token
+
+Access tokens returned from Azure are valid for an hour. If you use the token after it has expired, the API calls will return 401 errors. You could ask the user to sign in again, but the better option is to refresh the token silently.
+
+In order to do that, the app must request the `offline_access` scope. Add this scope to the `SCOPES` array in `auth_helper.rb`:
+
+```ruby
+# Scopes required by the app
+SCOPES = [ 'openid',
+           'offline_access',
+           'https://outlook.office.com/mail.read' ]
+```
+
+This will cause the token response from Azure to include a refresh token. Now let's add a helper method in `auth_helper.rb` to retrieve the cached token, check if it is expired, and refresh it if so.
+
+#### `get_access_token` in the `.\o365-tutorial\app\helpers\auth_helper.rb` file ####
+
+```ruby
+# Gets the current access token
+def get_access_token
+  # Get the current token hash from session
+  token_hash = session[:azure_token]
+
+  client = OAuth2::Client.new(CLIENT_ID,
+                              CLIENT_SECRET,
+                              :site => 'https://login.microsoftonline.com',
+                              :authorize_url => '/common/oauth2/v2.0/authorize',
+                              :token_url => '/common/oauth2/v2.0/token')
+
+  token = OAuth2::AccessToken.from_hash(client, token_hash)
+
+  # Check if token is expired, refresh if so
+  if token.expired?
+    new_token = token.refresh!
+    # Save new token
+    session[:azure_token] = new_token.to_hash
+    access_token = new_token.token
+  else
+    access_token = token.token
+  end
 end
 ```
 
@@ -319,13 +372,13 @@ Now we can modify the `gettoken` action one last time to redirect to the index a
 ```ruby
 def gettoken
   token = get_token_from_code params[:code]
-  session[:azure_access_token] = token
+  session[:azure_token] = token.to_hash
   session[:user_email] = get_user_email token.token
   redirect_to mail_index_url
 end
 ```
 
-Now going through the sign-in process in the app lands you at http://localhost:3000/mail/index. Of course that page doesn't do anything, so let's fix that.
+Now going through the sign-in process in the app lands you at http://localhost:3000/mail/index. Of course that page doesn't do anything yet, so let's fix that.
 
 ### Making REST calls ###
 
@@ -340,8 +393,10 @@ Save the file, run `bundle install`, and restart the server. Now we're ready to 
 ```ruby
 class MailController < ApplicationController
 
+  include AuthHelper
+
   def index
-    token = session[:azure_access_token]
+    token = get_access_token
     email = session[:user_email]
     if token
       # If a token is present in the session, get messages from the inbox
