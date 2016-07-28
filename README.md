@@ -37,24 +37,28 @@ Let's begin by replacing the default welcome page with a page of our own. To do 
 
 ### Contents of the `.\o365-tutorial\app\controllers\application_controller.rb` file ###
 
-    class ApplicationController < ActionController::Base
-      # Prevent CSRF attacks by raising an exception.
-      # For APIs, you may want to use :null_session instead.
-      protect_from_forgery with: :exception
-      
-      def home
-		# Display the login link.
-    	render html: '<a href="#">Log in and view my email</a>'.html_safe
-      end
-    end
+``ruby
+class ApplicationController < ActionController::Base
+  # Prevent CSRF attacks by raising an exception.
+  # For APIs, you may want to use :null_session instead.
+  protect_from_forgery with: :exception
+  
+  def home
+    # Display the login link.
+    render html: '<a href="#">Log in and view my email</a>'.html_safe
+  end
+end
+```
 
 As you can see, our home page will be very simple. For now, the link doesn't do anything, but we'll fix that soon. First we need to tell Rails to invoke this action. To do that, we need to define a route. Open the `.\o365-tutorial\config\routes.rb` file, and set the default route (or "root") to the `home` action we just defined.
 
 ### Contents of the `.\o365-tutorial\config\routes.rb` file ###
 
-    Rails.application.routes.draw do
-      root 'application#home'
-    end
+```ruby
+Rails.application.routes.draw do
+  root 'application#home'
+end
+```
 
 Save your changes. Now browsing to [http://localhost:3000](http://localhost:3000) should look like:
 
@@ -62,13 +66,23 @@ Save your changes. Now browsing to [http://localhost:3000](http://localhost:3000
 
 ## Implementing OAuth2 ##
 
-Our goal in this section is to make the link on our home page initiate the [OAuth2 Authorization Code Grant flow with Azure AD](https://msdn.microsoft.com/en-us/library/azure/dn645542.aspx). To make things easier, we'll use the [oauth2 gem](https://github.com/intridea/oauth2) to handle our OAuth requests. Open the `./o365-tutorial/GemFile` and add the following line anywhere in that file:
+Our goal in this section is to make the link on our home page initiate the [OAuth2 Authorization Code Grant flow with Azure AD](https://msdn.microsoft.com/en-us/library/azure/dn645542.aspx). To make things easier, we'll use the [oauth2 gem](https://github.com/intridea/oauth2) to handle our OAuth requests. We'll also use the [activerecord-session_store gem](https://github.com/rails/activerecord-session_store) to store our sessions in a database. Open the `./o365-tutorial/GemFile` and add the following lines anywhere in that file:
 
     gem 'oauth2'
+    gem 'activerecord-session_store'
 
 Save the file and run the following command (restart the rails server afterwards):
 
     bundle install
+
+Now let's configure the app to use the `activerecord-session_store` gem for session storage. The reason for this is that the default cookie store is limited to 4KB of data, which isn't enough for us to store the tokens we'll get back from Azure.
+
+Open the `.\o365-tutorial\config\initializers\session_store.rb` file. Replace the text `:cookie_store` with `:active_record_store`.
+
+On the command line, enter the following commands to generate the session database.
+
+    rails generate active_record:session_migration
+    rails db:migrate
 
 Because of the nature of the OAuth2 flow, it makes sense to create a controller to handle the redirects from Azure. Run the following command to generate a controller named `Auth`:
 
@@ -78,30 +92,32 @@ Open the `.\o365-tutorial\app\helpers\auth_helper.rb` file. We'll start here by 
 
 ### Contents of the `.\o365-tutorial\app\helpers\auth_helper.rb` file ###
 
-    module AuthHelper
-    
-      # App's client ID. Register the app in Application Registration Portal to get this value.
-      CLIENT_ID = '<YOUR APP ID HERE>'
-      # App's client secret. Register the app in Application Registration Portal to get this value.
-      CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+```ruby
+module AuthHelper
 
-	  # Scopes required by the app
-	  SCOPES = [ 'openid',
-				 'https://outlook.office.com/mail.read' ]
-      
-      REDIRECT_URI = 'http://localhost:3000/authorize' # Temporary!
-    
-      # Generates the login URL for the app.
-      def get_login_url
-    	client = OAuth2::Client.new(CLIENT_ID,
-	                                CLIENT_SECRET,
-	                                :site => 'https://login.microsoftonline.com',
-	                                :authorize_url => '/common/oauth2/v2.0/authorize',
-	                                :token_url => '/common/oauth2/v2.0/token')
-                                
-    	login_url = client.auth_code.authorize_url(:redirect_uri => REDIRECT_URI, :scope => SCOPES.join(' '))
-      end
-    end
+  # App's client ID. Register the app in Application Registration Portal to get this value.
+  CLIENT_ID = '<YOUR APP ID HERE>'
+  # App's client secret. Register the app in Application Registration Portal to get this value.
+  CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+
+  # Scopes required by the app
+  SCOPES = [ 'openid',
+             'https://outlook.office.com/mail.read' ]
+  
+  REDIRECT_URI = 'http://localhost:3000/authorize' # Temporary!
+
+  # Generates the login URL for the app.
+  def get_login_url
+    client = OAuth2::Client.new(CLIENT_ID,
+                                CLIENT_SECRET,
+                                :site => 'https://login.microsoftonline.com',
+                                :authorize_url => '/common/oauth2/v2.0/authorize',
+                                :token_url => '/common/oauth2/v2.0/token')
+                              
+    login_url = client.auth_code.authorize_url(:redirect_uri => REDIRECT_URI, :scope => SCOPES.join(' '))
+  end
+end
+```
 
 The first thing we do here is define our client ID and secret, and the permission scopes our app requires. We also define a redirect URI as a hard-coded value. We'll improve on that in a bit, but it will serve our purpose for now. Now we need to generate values for the client ID and secret.
 
@@ -129,18 +145,20 @@ Now that we have actual values in the `get_login_url` function, let's put it to 
 
 #### Updated contents of the `.\o365-tutorial\app\controllers\application_controller.rb` file ####
 
-    class ApplicationController < ActionController::Base
-      # Prevent CSRF attacks by raising an exception.
-      # For APIs, you may want to use :null_session instead.
-      protect_from_forgery with: :exception
-      include AuthHelper
-      
-      def home
-    	# Display the login link.
-    	login_url = get_login_url
-    	render html: "<a href='#{login_url}'>Log in and view my email</a>".html_safe
-      end
-    end
+```ruby
+class ApplicationController < ActionController::Base
+  # Prevent CSRF attacks by raising an exception.
+  # For APIs, you may want to use :null_session instead.
+  protect_from_forgery with: :exception
+  include AuthHelper
+  
+  def home
+    # Display the login link.
+    login_url = get_login_url
+    render html: "<a href='#{login_url}'>Log in and view my email</a>".html_safe
+  end
+end
+```
 
 Save your changes and browse to [http://localhost:3000](http://localhost:3000). If you hover over the link, it should look like:
 
@@ -157,7 +175,7 @@ Sign in with your Office 365 account. Your browser should redirect to back to ou
 If you scroll down on Rails' error page, you can see the request parameters, which include the authorization code.
 
     Parameters:
-	{"code"=>"M2ff0cb19-ec9d-db94-c5ab-4c634e319315"}
+	    {"code"=>"M2ff0cb19-ec9d-db94-c5ab-4c634e319315"}
 
 The reason we're seeing the error is because we haven't implemented a route to handle the `/authorize` path we hard-coded as our redirect URI. However, Rails has shown us that we're getting the authorization code back in the request, so we're on the right track! Let's fix that error now.
 
@@ -167,48 +185,54 @@ First, let's add a route for the `/authorize` path to `routes.rb`.
 
 #### Updated contents of the `.\o365-tutorial\config\routes.rb` file ####
 
-    Rails.application.routes.draw do
-      root 'application#home'
-      get 'authorize' => 'auth#gettoken'
-    end
+```ruby
+Rails.application.routes.draw do
+  root 'application#home'
+  get 'authorize' => 'auth#gettoken'
+end
+```
 
 The added line tells Rails that when a GET request comes in for `/authorize`, invoke the `gettoken` action on the `auth` controller. So to make this work, we need to implement that action. Open the `.\o365-tutorial\app\controllers\auth_controller.rb` file and define the `gettoken` action.
 
 #### Contents of the `.\o365-tutorial\app\controllers\auth_controller.rb` file ####
 
-    class AuthController < ApplicationController
-    
-      def gettoken
-    	render text: params[:code]
-      end
-    end
+```ruby
+class AuthController < ApplicationController
+
+  def gettoken
+    render text: params[:code]
+  end
+end
+```
 
 Let's make one last refinement before we try this new code. Now that we have a route for the redirect URI, we can remove the hard-coded constant in `auth_helper.rb`, and instead use the Rails name for the route: `authorize_url`.
 
 #### Updated contents of the `.\o365-tutorial\app\helpers\auth_helper.rb` file ####
 
-    module AuthHelper
-    
-      # App's client ID. Register the app in Application Registration Portal to get this value.
-      CLIENT_ID = '<YOUR APP ID HERE>'
-      # App's client secret. Register the app in Application Registration Portal to get this value.
-      CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+```ruby
+module AuthHelper
 
-	  # Scopes required by the app
-	  SCOPES = [ 'openid',
-				 'https://outlook.office.com/mail.read' ]
-    
-      # Generates the login URL for the app.
-      def get_login_url
-    	client = OAuth2::Client.new(CLIENT_ID,
-	                                CLIENT_SECRET,
-	                                :site => "https://login.microsoftonline.com",
-	                                :authorize_url => "/common/oauth2/v2.0/authorize",
-	                                :token_url => "/common/oauth2/v2.0/token")
-                                
-    	login_url = client.auth_code.authorize_url(:redirect_uri => authorize_url, :scope => SCOPES.join(' '))
-      end
-    end
+  # App's client ID. Register the app in Application Registration Portal to get this value.
+  CLIENT_ID = '<YOUR APP ID HERE>'
+  # App's client secret. Register the app in Application Registration Portal to get this value.
+  CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+
+  # Scopes required by the app
+  SCOPES = [ 'openid',
+             'https://outlook.office.com/mail.read' ]
+
+  # Generates the login URL for the app.
+  def get_login_url
+    client = OAuth2::Client.new(CLIENT_ID,
+                                CLIENT_SECRET,
+                                :site => "https://login.microsoftonline.com",
+                                :authorize_url => "/common/oauth2/v2.0/authorize",
+                                :token_url => "/common/oauth2/v2.0/token")
+                              
+    login_url = client.auth_code.authorize_url(:redirect_uri => authorize_url, :scope => SCOPES.join(' '))
+  end
+end
+```
 
 Refresh your browser (or repeat the sign-in process). Now instead of a Rails error page, you should see the value of the authorization code printed on the screen. We're getting closer, but that's still not very useful. Let's actually do something with that code.
 
@@ -216,78 +240,122 @@ Let's add another helper function to `auth_helper.rb` called `get_token_from_cod
 
 #### `get_token_from_code` in the `.\o365-tutorial\app\helpers\auth_helper.rb` file ####
 
-    # Exchanges an authorization code for a token
-    def get_token_from_code(auth_code)
-      client = OAuth2::Client.new(CLIENT_ID,
-                                  CLIENT_SECRET,
-                                  :site => 'https://login.microsoftonline.com',
-                                  :authorize_url => '/common/oauth2/v2.0/authorize',
-                                  :token_url => '/common/oauth2/v2.0/token')
-    
-      token = client.auth_code.get_token(auth_code,
-                                         :redirect_uri => authorize_url,
-                                         :scope => SCOPES.join(' '))
-    end
+```ruby
+# Exchanges an authorization code for a token
+def get_token_from_code(auth_code)
+  client = OAuth2::Client.new(CLIENT_ID,
+                              CLIENT_SECRET,
+                              :site => 'https://login.microsoftonline.com',
+                              :authorize_url => '/common/oauth2/v2.0/authorize',
+                              :token_url => '/common/oauth2/v2.0/token')
+
+  token = client.auth_code.get_token(auth_code,
+                                     :redirect_uri => authorize_url,
+                                     :scope => SCOPES.join(' '))
+end
+```
 
 ### Getting the user's email address ###
 
-The JSON array returned from `get_token_from_code` doesn't just include the access token. It also includes an ID token. We can use this token to find out a few pieces of information about the logged on user. In this case, we want to get the user's email address. You'll see why we want this soon.
+Our first use of the access token will be to get the user's email address from the Outlook API. You'll see why we want this soon.
 
-Add a new function `get_email_from_id_token` to `auth_helper.rb`.
+Add a new function `get_user_email` to `auth_helper.rb`.
 
-#### `get_email_from_id_token` in the `.\o365-tutorial\app\helpers\auth_helper.rb` file ####
+#### `get_user_email` in the `.\o365-tutorial\app\helpers\auth_helper.rb` file ####
 
-	# Parses an ID token and returns the user's email
-	def get_email_from_id_token(id_token)
+```ruby
+# Gets the user's email from the /Me endpoint
+def get_user_email(access_token)
+  conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
+    # Outputs to the console
+    faraday.response :logger
+    # Uses the default Net::HTTP adapter
+    faraday.adapter  Faraday.default_adapter  
+  end
 
-	  # JWT is in three parts, separated by a '.'
-	  token_parts = id_token.split('.')
-	  # Token content is in the second part
-	  encoded_token = token_parts[1]
-		
-	  # It's base64, but may not be padded
-	  # Fix padding so Base64 module can decode
-	  leftovers = token_parts[1].length.modulo(4)
-	  if leftovers == 2
-	    encoded_token += '=='
-	  elsif leftovers == 3
-	    encoded_token += '='
-	  end
-		
-	  # Base64 decode (urlsafe version)
-	  decoded_token = Base64.urlsafe_decode64(encoded_token)
-	
-	  # Load into a JSON object
-	  jwt = JSON.parse(decoded_token)
-	 
-	  # Email is in the 'preferred_username' field
-	  email = jwt['preferred_username']
-	end
+  response = conn.get do |request|
+    # Get user's info from /Me
+    request.url 'api/v2.0/Me'
+    request.headers['Authorization'] = "Bearer #{access_token}"
+    request.headers['Accept'] = 'application/json'
+  end
+
+  email = JSON.parse(response.body)['EmailAddress']
+end
+```
 
 Let's make sure that works. Modify the `gettoken` action in the `auth_controller.rb` file to use these helper functions and display the return values.
 
 #### Updated contents of the `.\o365-tutorial\app\controllers\auth_controller.rb` file ####
 
-    class AuthController < ApplicationController
-    
-      def gettoken
-    	token = get_token_from_code params[:code]
-		email = get_email_from_id_token token.params['id_token']
-    	render text: "Email: #{email}, TOKEN: #{token.token}"
-      end
-    end
+```ruby
+class AuthController < ApplicationController
+
+  def gettoken
+    token = get_token_from_code params[:code]
+    email = get_user_email token.token
+    render text: "Email: #{email}, TOKEN: #{token.token}"
+  end
+end
+```
 
 If you save your changes and go through the sign-in process again, you should now see the user's email followed by a long string of seemingly nonsensical characters. If everything's gone according to plan, that should be an access token.
 
 Now let's change our code to store the token and email in a session cookie instead of displaying them.
 
 #### New version of `gettoken` action ####
-    def gettoken
-      token = get_token_from_code params[:code]
-      session[:azure_access_token] = token.token
-      session[:user_email] = get_email_from_id_token token.params['id_token']
-      render text: "Access token saved in session cookie."
-    end
+
+```ruby
+def gettoken
+  token = get_token_from_code params[:code]
+  session[:azure_token] = token.to_hash
+  session[:user_email] = get_user_email token.token
+  render text: "Access token saved in session cookie."
+end
+```
+
+### Refreshing the access token
+
+Access tokens returned from Azure are valid for an hour. If you use the token after it has expired, the API calls will return 401 errors. You could ask the user to sign in again, but the better option is to refresh the token silently.
+
+In order to do that, the app must request the `offline_access` scope. Add this scope to the `SCOPES` array in `auth_helper.rb`:
+
+```ruby
+# Scopes required by the app
+SCOPES = [ 'openid',
+           'offline_access',
+           'https://outlook.office.com/mail.read' ]
+```
+
+This will cause the token response from Azure to include a refresh token. Now let's add a helper method in `auth_helper.rb` to retrieve the cached token, check if it is expired, and refresh it if so.
+
+#### `get_access_token` in the `.\o365-tutorial\app\helpers\auth_helper.rb` file ####
+
+```ruby
+# Gets the current access token
+def get_access_token
+  # Get the current token hash from session
+  token_hash = session[:azure_token]
+
+  client = OAuth2::Client.new(CLIENT_ID,
+                              CLIENT_SECRET,
+                              :site => 'https://login.microsoftonline.com',
+                              :authorize_url => '/common/oauth2/v2.0/authorize',
+                              :token_url => '/common/oauth2/v2.0/token')
+
+  token = OAuth2::AccessToken.from_hash(client, token_hash)
+
+  # Check if token is expired, refresh if so
+  if token.expired?
+    new_token = token.refresh!
+    # Save new token
+    session[:azure_token] = new_token.to_hash
+    access_token = new_token.token
+  else
+    access_token = token.token
+  end
+end
+```
 
 ## Using the Mail API ##
 
@@ -301,14 +369,16 @@ Now we can modify the `gettoken` action one last time to redirect to the index a
 
 ### New version of `gettoken` action ###
 
-    def gettoken
-      token = get_token_from_code params[:code]
-      session[:azure_access_token] = token
-      session[:user_email] = get_email_from_id_token token.params['id_token']
-      redirect_to mail_index_url
-    end
+```ruby
+def gettoken
+  token = get_token_from_code params[:code]
+  session[:azure_token] = token.to_hash
+  session[:user_email] = get_user_email token.token
+  redirect_to mail_index_url
+end
+```
 
-Now going through the sign-in process in the app lands you at http://localhost:3000/mail/index. Of course that page doesn't do anything, so let's fix that.
+Now going through the sign-in process in the app lands you at http://localhost:3000/mail/index. Of course that page doesn't do anything yet, so let's fix that.
 
 ### Making REST calls ###
 
@@ -320,40 +390,44 @@ Save the file, run `bundle install`, and restart the server. Now we're ready to 
 
 #### Contents of the `.\o365-tutorial\app\controllers\mail_controller.rb` file ####
 
-    class MailController < ApplicationController
+```ruby
+class MailController < ApplicationController
 
-      def index
-    	token = session[:azure_access_token]
-		email = session[:user_email]
-    	if token
-	      # If a token is present in the session, get messages from the inbox
-	      conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
-		    # Outputs to the console
-		    faraday.response :logger
-		    # Uses the default Net::HTTP adapter
-		    faraday.adapter  Faraday.default_adapter  
-	      end
-	      
-	      response = conn.get do |request|
-		    # Get messages from the inbox
-		    # Sort by ReceivedDateTime in descending orderby
-		    # Get the first 20 results
-		    request.url '/api/v2.0/Me/Messages?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20'
-		    request.headers['Authorization'] = "Bearer #{token}"
-		    request.headers['Accept'] = 'application/json'
-		    request.headers['X-AnchorMailbox'] = email
-	      end
-	      
-		  # Assign the resulting value to the @messages
-		  # variable to make it available to the view template.
-	      @messages = JSON.parse(response.body)['value']
-	    else
-	      # If no token, redirect to the root url so user
-	      # can sign in.
-	      redirect_to root_url
-	    end
-	  end
+  include AuthHelper
+
+  def index
+    token = get_access_token
+    email = session[:user_email]
+    if token
+      # If a token is present in the session, get messages from the inbox
+      conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
+        # Outputs to the console
+        faraday.response :logger
+        # Uses the default Net::HTTP adapter
+        faraday.adapter  Faraday.default_adapter  
+      end
+      
+      response = conn.get do |request|
+        # Get messages from the inbox
+        # Sort by ReceivedDateTime in descending orderby
+        # Get the first 20 results
+        request.url '/api/v2.0/Me/Messages?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20'
+        request.headers['Authorization'] = "Bearer #{token}"
+        request.headers['Accept'] = 'application/json'
+        request.headers['X-AnchorMailbox'] = email
+      end
+      
+      # Assign the resulting value to the @messages
+      # variable to make it available to the view template.
+      @messages = JSON.parse(response.body)['value']
+    else
+      # If no token, redirect to the root url so user
+      # can sign in.
+      redirect_to root_url
     end
+  end
+end
+```
 
 To summarize the code in the `index` action:
 
@@ -371,36 +445,42 @@ Now we need to modify the view template associated with the `index` action to us
 
 #### Contents of the `.\o365-tutorial\app\views\mail\index.html.erb` file ####
 
-    <h1>My messages</h1>
-    <table>
-      <tr>
-	    <th>From</th>
-	    <th>Subject</th>
-	    <th>Received</th>
-      </tr>
-      <% @messages.each do |message| %>
-	    <tr>
-	      <td><%= message['From']['EmailAddress']['Name'] %></td>
-	      <td><%= message['Subject'] %></td>
-	      <td><%= message['ReceivedDateTime'] %></td>
-	    </tr>
-      <% end %>
-    </table>
+```html
+<h1>My messages</h1>
+<table>
+  <tr>
+  <th>From</th>
+  <th>Subject</th>
+  <th>Received</th>
+  </tr>
+  <% @messages.each do |message| %>
+  <tr>
+    <td><%= message['From']['EmailAddress']['Name'] %></td>
+    <td><%= message['Subject'] %></td>
+    <td><%= message['ReceivedDateTime'] %></td>
+  </tr>
+  <% end %>
+</table>
+```
 
 The template is a fairly simple HTML table. It uses embedded Ruby to iterate through the results in the `@messages` variable we set in the `index` action and create a table row for each message. The syntax to access the values of each message is straightforward. Notice the way that the display name of the message sender is extracted:
 
-    <%= message['From']['EmailAddress']['Name'] %>
+```html
+<%= message['From']['EmailAddress']['Name'] %>
+```
 
 This mirrors the JSON structure for the `From` value:
 
-    "From": {
-      "@odata.type": "#Microsoft.OutlookServices.Recipient",
-      "EmailAddress": {
-	    "@odata.type": "#Microsoft.OutlookServices.EmailAddress",
-	    "Address": "jason@contoso.com",
-	    "Name": "Jason Johnston"
-      }
-    }
+```json
+"From": {
+  "@odata.type": "#Microsoft.OutlookServices.Recipient",
+  "EmailAddress": {
+  "@odata.type": "#Microsoft.OutlookServices.EmailAddress",
+  "Address": "jason@contoso.com",
+  "Name": "Jason Johnston"
+  }
+}
+```
 
 Save the changes and sign in to the app. You should now see a simple table of messages in your inbox.
 
@@ -417,4 +497,4 @@ Copyright (c) Microsoft. All rights reserved.
 ----------
 Connect with me on Twitter [@JasonJohMSFT](https://twitter.com/JasonJohMSFT)
 
-Follow the [Exchange Dev Blog](http://blogs.msdn.com/b/exchangedev/)
+Follow the [Outlook/Exchange Dev Blog](http://blogs.msdn.com/b/exchangedev/)
