@@ -8,7 +8,6 @@ module AuthHelper
   
   # Scopes required by the app
   SCOPES = [ 'openid',
-             'profile',
              'https://outlook.office.com/mail.read',
              'https://outlook.office.com/calendars.read',
              'https://outlook.office.com/contacts.read' ]
@@ -36,32 +35,24 @@ module AuthHelper
                                        :redirect_uri => authorize_url,
                                        :scope => SCOPES.join(' '))
   end
-  
-  # Parses an ID token and returns the user's email
-  def get_email_from_id_token(id_token)
-    
-    # JWT is in three parts, separated by a '.'
-    token_parts = id_token.split('.')
-    # Token content is in the second part
-    encoded_token = token_parts[1]
-    
-    # It's base64, but may not be padded
-    # Fix padding so Base64 module can decode
-    leftovers = token_parts[1].length.modulo(4)
-    if leftovers == 2
-      encoded_token += '=='
-    elsif leftovers == 3
-      encoded_token += '='
+
+  # Gets the user's email from the /Me endpoint
+  def get_user_email(access_token)
+    conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
+      # Outputs to the console
+      faraday.response :logger
+      # Uses the default Net::HTTP adapter
+      faraday.adapter  Faraday.default_adapter  
     end
-    
-    # Base64 decode (urlsafe version)
-    decoded_token = Base64.urlsafe_decode64(encoded_token)
-    
-    # Load into a JSON object
-    jwt = JSON.parse(decoded_token)
-    
-    # Email is in the 'preferred_username' field
-    email = jwt['preferred_username']
+
+    response = conn.get do |request|
+      # Get user's info from /Me
+      request.url 'api/v2.0/Me'
+      request.headers['Authorization'] = "Bearer #{access_token}"
+      request.headers['Accept'] = 'application/json'
+    end
+
+    email = JSON.parse(response.body)['EmailAddress']
   end
 end
 
