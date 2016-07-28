@@ -7,7 +7,8 @@ module AuthHelper
   CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
   
   # Scopes required by the app
-  SCOPES = [ 'openid', 
+  SCOPES = [ 'openid',
+             'profile',
              'https://outlook.office.com/mail.read',
              'https://outlook.office.com/calendars.read',
              'https://outlook.office.com/contacts.read' ]

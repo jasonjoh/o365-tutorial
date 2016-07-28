@@ -17,7 +17,7 @@ class MailController < ApplicationController
         # Get messages from the inbox
         # Sort by ReceivedDateTime in descending orderby
         # Get the first 20 results
-        request.url '/api/v2.0/Me/Messages?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20'
+        request.url '/api/v2.0/Me/MailFolders/Inbox/Messages?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20'
         request.headers['Authorization'] = "Bearer #{token}"
         request.headers['Accept'] = 'application/json'
         request.headers['X-AnchorMailbox'] = email
