@@ -37,7 +37,7 @@ Let's begin by replacing the default welcome page with a page of our own. To do 
 
 ### Contents of the `.\o365-tutorial\app\controllers\application_controller.rb` file ###
 
-``ruby
+```ruby
 class ApplicationController < ActionController::Base
   # Prevent CSRF attacks by raising an exception.
   # For APIs, you may want to use :null_session instead.
@@ -445,7 +445,7 @@ Now we need to modify the view template associated with the `index` action to us
 
 #### Contents of the `.\o365-tutorial\app\views\mail\index.html.erb` file ####
 
-```html
+```erb
 <h1>My messages</h1>
 <table>
   <tr>
@@ -465,7 +465,7 @@ Now we need to modify the view template associated with the `index` action to us
 
 The template is a fairly simple HTML table. It uses embedded Ruby to iterate through the results in the `@messages` variable we set in the `index` action and create a table row for each message. The syntax to access the values of each message is straightforward. Notice the way that the display name of the message sender is extracted:
 
-```html
+```erb
 <%= message['From']['EmailAddress']['Name'] %>
 ```
 
