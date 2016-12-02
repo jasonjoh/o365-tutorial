@@ -37,24 +37,28 @@ Ruby on Rails が動作していることを確認したので、実際の作業
 
 ### `.\o365-tutorial\app\controllers\application_controller.rb` ファイルのコンテンツ ###
 
-    class ApplicationController < ActionController::Base
-      # Prevent CSRF attacks by raising an exception.
-      # For APIs, you may want to use :null_session instead.
-      protect_from_forgery with: :exception
-      
-      def home
-		# Display the login link.
-    	render html: '<a href="#">Log in and view my email</a>'.html_safe
-      end
-    end
+```ruby
+class ApplicationController < ActionController::Base
+  # Prevent CSRF attacks by raising an exception.
+  # For APIs, you may want to use :null_session instead.
+  protect_from_forgery with: :exception
+  
+  def home
+    # Display the login link.
+    render html: '<a href="#">Log in and view my email</a>'.html_safe
+  end
+end
+```
 
 お分かりのように、非常に単純なホーム ページになります。現在のところ、リンクは機能しませんが、すぐに修復します。まず、Rails にこのアクションを呼び出すよう伝える必要があります。そのためには、ルートを定義する必要があります。`.\o365-tutorial\config\routes.rb` ファイルを開き、既定のルート (「root」) を、定義した `home` アクションに設定します。
 
 ### `.\o365-tutorial\config\routes.rb` ファイルのコンテンツ ###
 
-    Rails.application.routes.draw do
-      root 'application#home'
-    end
+```ruby
+Rails.application.routes.draw do
+  root 'application#home'
+end
+```
 
 変更内容を保存します。[http://localhost:3000](http://localhost:3000) をブラウズすると次のようになります。
 
@@ -62,13 +66,23 @@ Ruby on Rails が動作していることを確認したので、実際の作業
 
 ## OAuth2 を実装する ##
 
-このセクションの目標は、ホーム ページ上のリンクから [Azure AD による OAuth2 承認コードの付与フロー](https://msdn.microsoft.com/ja-jp/library/azure/dn645542.aspx)を開始させることです。処理を簡単にするには、[oauth2 gem](https://github.com/intridea/oauth2) を使用して、OAuth 要求を処理します。`./o365-tutorial/GemFile` を開き、次の行をそのファイルの任意の場所に追加します。
+このセクションの目標は、ホーム ページ上のリンクから [Azure AD による OAuth2 承認コードの付与フロー](https://msdn.microsoft.com/en-us/library/azure/dn645542.aspx)を開始することです。より簡単にするには、[oauth2 gem](https://github.com/intridea/oauth2) を使用して、OAuth 要求を処理します。セッションをデータベースに格納するために [activerecord session_store gem](https://github.com/rails/activerecord-session_store) も使用します。`./o365-tutorial/GemFile` を開き、次の行をそのファイルの任意の場所に追加します。
 
     gem 'oauth2'
+    gem 'activerecord-session_store'
 
 ファイルを保存し、次のコマンドを実行します (後で Rails サーバーを再起動します)。
 
     bundle install
+
+次に、セッション ストレージで `activerecord-session_store` gemを使えるようにアプリを構成しましょう。これを行う理由は、既定の Cookie ストアのデータ量が 4 KB に制限されており、 Azure から返されるトークンを格納するのに十分でないためです。
+
+`.\o365-tutorial\config\initializers\session_store.rb` ファイルを開きます。テキスト `:cookie_store` を `:active_record_store` に置換します。
+
+コマンド ラインに次のコマンドを入力して、セッション データベースを生成します。
+
+    rails generate active_record:session_migration
+    rails db:migrate
 
 OAuth2 フローの性質上、Azure からのリダイレクトを処理するコントローラーを作成することは意味を成します。`Auth` という名前のコントローラーを生成するには、次のコマンドを実行します。
 
@@ -78,30 +92,32 @@ OAuth2 フローの性質上、Azure からのリダイレクトを処理する�
 
 ### `.\o365-tutorial\app\helpers\auth_helper.rb` ファイルのコンテンツ ###
 
-    module AuthHelper
-    
-      # App's client ID. Register the app in Application Registration Portal to get this value.
-      CLIENT_ID = '<YOUR APP ID HERE>'
-      # App's client secret. Register the app in Application Registration Portal to get this value.
-      CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+```ruby
+module AuthHelper
 
-	  # Scopes required by the app
-	  SCOPES = [ 'openid',
-				 'https://outlook.office.com/mail.read' ]
-      
-      REDIRECT_URI = 'http://localhost:3000/authorize' # Temporary!
-    
-      # Generates the login URL for the app.
-      def get_login_url
-    	client = OAuth2::Client.new(CLIENT_ID,
-	                                CLIENT_SECRET,
-	                                :site => 'https://login.microsoftonline.com',
-	                                :authorize_url => '/common/oauth2/v2.0/authorize',
-	                                :token_url => '/common/oauth2/v2.0/token')
-                                
-    	login_url = client.auth_code.authorize_url(:redirect_uri => REDIRECT_URI, :scope => SCOPES.join(' '))
-      end
-    end
+  # App's client ID. Register the app in Application Registration Portal to get this value.
+  CLIENT_ID = '<YOUR APP ID HERE>'
+  # App's client secret. Register the app in Application Registration Portal to get this value.
+  CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+
+  # Scopes required by the app
+  SCOPES = [ 'openid',
+             'https://outlook.office.com/mail.read' ]
+  
+  REDIRECT_URI = 'http://localhost:3000/authorize' # Temporary!
+
+  # Generates the login URL for the app.
+  def get_login_url
+    client = OAuth2::Client.new(CLIENT_ID,
+                                CLIENT_SECRET,
+                                :site => 'https://login.microsoftonline.com',
+                                :authorize_url => '/common/oauth2/v2.0/authorize',
+                                :token_url => '/common/oauth2/v2.0/token')
+                              
+    login_url = client.auth_code.authorize_url(:redirect_uri => REDIRECT_URI, :scope => SCOPES.join(' '))
+  end
+end
+```
 
 最初にすることは、クライアント ID とシークレット、およびアプリに必要なアクセス許可スコープを定義することです。また、ハードコーディング値としてリダイレクト URI を定義します。この点は少し改善される予定ですが、現時点でこのガイドの目的に対応しています。ここで、クライアント ID とシークレットの値を生成する必要があります。
 
@@ -125,22 +141,24 @@ OAuth2 フローの性質上、Azure からのリダイレクトを処理する�
 
 ### コーディングに戻る ###
 
-`get_login_url` 関数に実際の値が得られたので、関数が機能するようにしましょう。このメソッドを使用してリンクに記入するには、`ApplicationController` の `home` アクションを変更します。この関数にアクセスできるようにするには、`AuthHelper` モジュールを含める必要があります。
+`get_login_url` 関数に実際の値が得られたので、関数が機能するようにしましょう。このメソッドを使用してリンクに記入するには、`home` の `ApplicationController` アクションを変更します。この関数にアクセスできるようにするには、`AuthHelper` モジュールを含める必要があります。
 
 #### `.\o365-tutorial\app\controllers\application_controller.rb` ファイルの更新されたコンテンツ ####
 
-    class ApplicationController < ActionController::Base
-      # Prevent CSRF attacks by raising an exception.
-      # For APIs, you may want to use :null_session instead.
-      protect_from_forgery with: :exception
-      include AuthHelper
-      
-      def home
-    	# Display the login link.
-    	login_url = get_login_url
-    	render html: "<a href='#{login_url}'>Log in and view my email</a>".html_safe
-      end
-    end
+```ruby
+class ApplicationController < ActionController::Base
+  # Prevent CSRF attacks by raising an exception.
+  # For APIs, you may want to use :null_session instead.
+  protect_from_forgery with: :exception
+  include AuthHelper
+  
+  def home
+    # Display the login link.
+    login_url = get_login_url
+    render html: "<a href='#{login_url}'>Log in and view my email</a>".html_safe
+  end
+end
+```
 
 変更内容を保存し、[http://localhost:3000](http://localhost:3000) を参照します。マウス カーソルをリンクの上に重ねると、次のように表示されます。
 
@@ -157,137 +175,187 @@ Office 365 アカウントでサインインします。ブラウザーがアプ
 Rails のエラー ページをスクロールすると、承認コードを含む、要求のパラメーターが表示されます。
 
     Parameters:
-	{"code"=>"M2ff0cb19-ec9d-db94-c5ab-4c634e319315"}
+        {"code"=>"M2ff0cb19-ec9d-db94-c5ab-4c634e319315"}
 
 エラーが表示される理由は、リダイレクト URI としてハードコーディングした `/authorize` パスを処理するルートを実装していないためです。しかし、Rails は、要求において承認コードを取得していることを示していました。方向としては正しいわけです。では、このエラーを修復しましょう。
 
 ### トークン用にコードを交換する ###
 
-最初に、`routes.rb` への `/authorize` のパスのルートを追加しましょう。
+最初に、`/authorize` への `routes.rb` のパスのルートを追加しましょう。
 
 #### `.\o365-tutorial\config\routes.rb` ファイルの更新されたコンテンツ ####
 
-    Rails.application.routes.draw do
-      root 'application#home'
-      get 'authorize' => 'auth#gettoken'
-    end
+```ruby
+Rails.application.routes.draw do
+  root 'application#home'
+  get 'authorize' => 'auth#gettoken'
+end
+```
 
-追加された行は、`/authorize` で GET 要求を受信すると、`auth` コントローラーで `gettoken` アクションを呼び出すことを Rails に伝えます。したがって、これを機能させるには、対象のアクションを実装する必要があります。`.\o365-tutorial\app\controllers\auth_controller.rb` ファイルを開き、`gettoken` アクションを定義します。
+追加された行は、`/authorize` で GET 要求を受信すると、`gettoken` コントローラーで `auth` アクションを呼び出すことを Rails に伝えます。したがって、これを機能させるには、対象のアクションを実装する必要があります。`.\o365-tutorial\app\controllers\auth_controller.rb` ファイルを開き、`gettoken` アクションを定義します。
 
 #### `.\o365-tutorial\app\controllers\auth_controller.rb` ファイルのコンテンツ ####
 
-    class AuthController < ApplicationController
-    
-      def gettoken
-    	render text: params[:code]
-      end
-    end
+```ruby
+class AuthController < ApplicationController
+
+  def gettoken
+    render text: params[:code]
+  end
+end
+```
 
 この新しいコードを試行する前に、最後にもう 1 つ改良しましょう。リダイレクト URI へのルートができたので、`auth_helper.rb` のハードコーディングされた定数を削除できます。代わりに、ルートの Rails 名 `authorize_url` を使用します。
 
 #### `.\o365-tutorial\app\helpers\auth_helper.rb` ファイルの更新されたコンテンツ ####
 
-    module AuthHelper
-    
-      # App's client ID. Register the app in Application Registration Portal to get this value.
-      CLIENT_ID = '<YOUR APP ID HERE>'
-      # App's client secret. Register the app in Application Registration Portal to get this value.
-      CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+```ruby
+module AuthHelper
 
-	  # Scopes required by the app
-	  SCOPES = [ 'openid',
-				 'https://outlook.office.com/mail.read' ]
-    
-      # Generates the login URL for the app.
-      def get_login_url
-    	client = OAuth2::Client.new(CLIENT_ID,
-	                                CLIENT_SECRET,
-	                                :site => "https://login.microsoftonline.com",
-	                                :authorize_url => "/common/oauth2/v2.0/authorize",
-	                                :token_url => "/common/oauth2/v2.0/token")
-                                
-    	login_url = client.auth_code.authorize_url(:redirect_uri => authorize_url, :scope => SCOPES.join(' '))
-      end
-    end
+  # App's client ID. Register the app in Application Registration Portal to get this value.
+  CLIENT_ID = '<YOUR APP ID HERE>'
+  # App's client secret. Register the app in Application Registration Portal to get this value.
+  CLIENT_SECRET = '<YOUR APP PASSWORD HERE>'
+
+  # Scopes required by the app
+  SCOPES = [ 'openid',
+             'https://outlook.office.com/mail.read' ]
+
+  # Generates the login URL for the app.
+  def get_login_url
+    client = OAuth2::Client.new(CLIENT_ID,
+                                CLIENT_SECRET,
+                                :site => "https://login.microsoftonline.com",
+                                :authorize_url => "/common/oauth2/v2.0/authorize",
+                                :token_url => "/common/oauth2/v2.0/token")
+                              
+    login_url = client.auth_code.authorize_url(:redirect_uri => authorize_url, :scope => SCOPES.join(' '))
+  end
+end
+```
 
 ご使用のブラウザーを更新します (または、サインイン処理を繰り返します)。ここで、Rails のエラー ページの代わりに、画面上に出力された承認コードの値が表示されます。完成に近づいてきましたが、まだ非常に便利な状態ではありません。実際にコードで何かしてみましょう。
 
-`get_token_from_code` と呼ばれる、`auth_helper.rb` に対するもう 1 つのヘルパー関数を追加してみましょう。
+`auth_helper.rb` と呼ばれる、`get_token_from_code` に対するもう 1 つのヘルパー関数を追加してみましょう。
 
-#### `.\o365-tutorial\app\helpers\auth_helper.rb` ファイル内の `get_token_from_code` ####
+#### `get_token_from_code` ファイル内の `.\o365-tutorial\app\helpers\auth_helper.rb` ####
 
-    # Exchanges an authorization code for a token
-    def get_token_from_code(auth_code)
-      client = OAuth2::Client.new(CLIENT_ID,
-                                  CLIENT_SECRET,
-                                  :site => 'https://login.microsoftonline.com',
-                                  :authorize_url => '/common/oauth2/v2.0/authorize',
-                                  :token_url => '/common/oauth2/v2.0/token')
-    
-      token = client.auth_code.get_token(auth_code,
-                                         :redirect_uri => authorize_url,
-                                         :scope => SCOPES.join(' '))
-    end
+```ruby
+# Exchanges an authorization code for a token
+def get_token_from_code(auth_code)
+  client = OAuth2::Client.new(CLIENT_ID,
+                              CLIENT_SECRET,
+                              :site => 'https://login.microsoftonline.com',
+                              :authorize_url => '/common/oauth2/v2.0/authorize',
+                              :token_url => '/common/oauth2/v2.0/token')
+
+  token = client.auth_code.get_token(auth_code,
+                                     :redirect_uri => authorize_url,
+                                     :scope => SCOPES.join(' '))
+end
+```
 
 ### ユーザーの電子メール アドレスの取得 ###
 
-`get_token_from_code` から返される JSON 配列には、アクセス トークンの他に、ID トークンも含まれます。このトークンを使用して、ログオン中のユーザーについて、いくつかの情報を確認することができます。この例では、ユーザーの電子メール アドレスを取得します。その理由は、後ほどご覧いただけます。
+Outlook の API からユーザーの電子メール アドレスを取得するときに、はじめてアクセス トークンを使用します。これが必要な理由は、後で分かります。
 
-`auth_helper.rb` に新しい関数 `get_email_from_id_token` を追加する
+`auth_helper.rb` に新しい関数 `get_user_email` を追加する
 
-#### `.\o365-tutorial\app\helpers\auth_helper.rb` ファイル内の `get_email_from_id_token` ####
+#### `get_user_email` ファイル内の `.\o365-tutorial\app\helpers\auth_helper.rb` ####
 
-	# Parses an ID token and returns the user's email
-	def get_email_from_id_token(id_token)
+```ruby
+# Gets the user's email from the /Me endpoint
+def get_user_email(access_token)
+  conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
+    # Outputs to the console
+    faraday.response :logger
+    # Uses the default Net::HTTP adapter
+    faraday.adapter  Faraday.default_adapter  
+  end
 
-	  # JWT is in three parts, separated by a '.'
-	  token_parts = id_token.split('.')
-	  # Token content is in the second part
-	  encoded_token = token_parts[1]
-		
-	  # It's base64, but may not be padded
-	  # Fix padding so Base64 module can decode
-	  leftovers = token_parts[1].length.modulo(4)
-	  if leftovers == 2
-	    encoded_token += '=='
-	  elsif leftovers == 3
-	    encoded_token += '='
-	  end
-		
-	  # Base64 decode (urlsafe version)
-	  decoded_token = Base64.urlsafe_decode64(encoded_token)
-	
-	  # Load into a JSON object
-	  jwt = JSON.parse(decoded_token)
-	 
-	  # Email is in the 'preferred_username' field
-	  email = jwt['preferred_username']
-	end
+  response = conn.get do |request|
+    # Get user's info from /Me
+    request.url 'api/v2.0/Me'
+    request.headers['Authorization'] = "Bearer #{access_token}"
+    request.headers['Accept'] = 'application/json'
+  end
 
-動作することを確認してみましょう。`auth_controller.rb` ファイルで `gettoken` アクションを変更すると、これらのヘルパー関数を使用して戻り値を表示できます。
+  email = JSON.parse(response.body)['EmailAddress']
+end
+```
+
+動作することを確認してみましょう。`gettoken` ファイルで `auth_controller.rb` アクションを変更すると、これらのヘルパー関数を使用して戻り値を表示できます。
 
 #### `.\o365-tutorial\app\controllers\auth_controller.rb` ファイルの更新されたコンテンツ ####
 
-    class AuthController < ApplicationController
-    
-      def gettoken
-    	token = get_token_from_code params[:code]
-		email = get_email_from_id_token token.params['id_token']
-    	render text: "Email: #{email}, TOKEN: #{token.token}"
-      end
-    end
+```ruby
+class AuthController < ApplicationController
+
+  def gettoken
+    token = get_token_from_code params[:code]
+    email = get_user_email token.token
+    render text: "Email: #{email}, TOKEN: #{token.token}"
+  end
+end
+```
 
 変更内容を保存して、サインイン処理をもう一度実行すると、ユーザーの電子メールとともに、一見意味不明な文字の長い文字列が表示されます。計画に従ってすべてが完了すれば、これがアクセス トークンになります。
 
 ここで、トークンを表示するのではなく、セッション Cookie に格納するようコードを変更しましょう。
 
 #### 新しいバージョンの `gettoken` アクション ####
-    def gettoken
-      token = get_token_from_code params[:code]
-      session[:azure_access_token] = token.token
-      session[:user_email] = get_email_from_id_token token.params['id_token']
-      render text: "Access token saved in session cookie."
-    end
+
+```ruby
+def gettoken
+  token = get_token_from_code params[:code]
+  session[:azure_token] = token.to_hash
+  session[:user_email] = get_user_email token.token
+  render text: "Access token saved in session cookie."
+end
+```
+
+### アクセス トークンを更新する
+
+Azure から返されるアクセス トークンの有効期限は 1 時間です。期限切れになった後にトークンを使用すると、API 呼び出しから 401 エラーが返されます。ユーザーにもう一度サインインするよう求めることもできますが、それより良い方法として、トークンを更新することができます。
+
+これを行うために、アプリで `offline_access` スコープを要求する必要があります。このスコープを `auth_helper.rb` にある `SCOPES` 配列に追加します。
+
+```ruby
+# Scopes required by the app
+SCOPES = [ 'openid',
+           'offline_access',
+           'https://outlook.office.com/mail.read' ]
+```
+
+これにより、Azure から更新トークンを含めるためのトークン応答が発せられます。次にヘルパー メソッドを `auth_helper.rb` に追加してキャッシュされたトークンを取得し、有効期限が切れていないか確認し、期限切れの場合は更新します。
+
+#### `.\o365-tutorial\app\helpers\auth_helper.rb` ファイル内の `get_access_token` ####
+
+```ruby
+# Gets the current access token
+def get_access_token
+  # Get the current token hash from session
+  token_hash = session[:azure_token]
+
+  client = OAuth2::Client.new(CLIENT_ID,
+                              CLIENT_SECRET,
+                              :site => 'https://login.microsoftonline.com',
+                              :authorize_url => '/common/oauth2/v2.0/authorize',
+                              :token_url => '/common/oauth2/v2.0/token')
+
+  token = OAuth2::AccessToken.from_hash(client, token_hash)
+
+  # Check if token is expired, refresh if so
+  if token.expired?
+    new_token = token.refresh!
+    # Save new token
+    session[:azure_token] = new_token.to_hash
+    access_token = new_token.token
+  else
+    access_token = token.token
+  end
+end
+```
 
 ## メール API を使用する ##
 
@@ -301,14 +369,16 @@ Rails のエラー ページをスクロールすると、承認コードを含�
 
 ### 新しいバージョンの `gettoken` アクション ###
 
-    def gettoken
-      token = get_token_from_code params[:code]
-      session[:azure_access_token] = token
-      session[:user_email] = get_email_from_id_token token.params['id_token']
-      redirect_to mail_index_url
-    end
+```ruby
+def gettoken
+  token = get_token_from_code params[:code]
+  session[:azure_token] = token.to_hash
+  session[:user_email] = get_user_email token.token
+  redirect_to mail_index_url
+end
+```
 
-アプリのサインイン処理は、http://localhost:3000/mail/index にたどり着きました。もちろん、このページでは何もできないので、修復しましょう。
+アプリのサインイン処理を進めて、http://localhost:3000/mail/index にたどり着きました。もちろん、このページでは何もできないので、修復しましょう。
 
 ### REST を呼び出す ###
 
@@ -316,91 +386,101 @@ REST を呼び出すには、[Faraday gem](https://github.com/lostisland/faraday
 
     gem 'faraday'
 
-ファイルを保存し、`bundle install` を実行してから、サーバーを再起動します。これで、`Mail` コントローラーに `index` アクションを実装する準備ができました。`.\o365-tutorial\app\controllers\mail_controller.rb` ファイルを開き、次のように `index` アクションを定義します。
+ファイルを保存し、`bundle install` を実行してから、サーバーを再起動します。これで、`index` コントローラーに `Mail` アクションを実装する準備ができました。`.\o365-tutorial\app\controllers\mail_controller.rb` ファイルを開き、次のように `index` アクションを定義します。
 
 #### `.\o365-tutorial\app\controllers\mail_controller.rb` ファイルのコンテンツ ####
 
-    class MailController < ApplicationController
+```ruby
+class MailController < ApplicationController
 
-      def index
-    	token = session[:azure_access_token]
-		email = session[:user_email]
-    	if token
-	      # If a token is present in the session, get messages from the inbox
-	      conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
-		    # Outputs to the console
-		    faraday.response :logger
-		    # Uses the default Net::HTTP adapter
-		    faraday.adapter  Faraday.default_adapter  
-	      end
-	      
-	      response = conn.get do |request|
-		    # Get messages from the inbox
-		    # Sort by ReceivedDateTime in descending orderby
-		    # Get the first 20 results
-		    request.url '/api/v2.0/Me/Messages?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20'
-		    request.headers['Authorization'] = "Bearer #{token}"
-		    request.headers['Accept'] = 'application/json'
-		    request.headers['X-AnchorMailbox'] = email
-	      end
-	      
-		  # Assign the resulting value to the @messages
-		  # variable to make it available to the view template.
-	      @messages = JSON.parse(response.body)['value']
-	    else
-	      # If no token, redirect to the root url so user
-	      # can sign in.
-	      redirect_to root_url
-	    end
-	  end
+  include AuthHelper
+
+  def index
+    token = get_access_token
+    email = session[:user_email]
+    if token
+      # If a token is present in the session, get messages from the inbox
+      conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
+        # Outputs to the console
+        faraday.response :logger
+        # Uses the default Net::HTTP adapter
+        faraday.adapter  Faraday.default_adapter  
+      end
+      
+      response = conn.get do |request|
+        # Get messages from the inbox
+        # Sort by ReceivedDateTime in descending orderby
+        # Get the first 20 results
+        request.url '/api/v2.0/Me/Messages?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20'
+        request.headers['Authorization'] = "Bearer #{token}"
+        request.headers['Accept'] = 'application/json'
+        request.headers['X-AnchorMailbox'] = email
+      end
+      
+      # Assign the resulting value to the @messages
+      # variable to make it available to the view template.
+      @messages = JSON.parse(response.body)['value']
+    else
+      # If no token, redirect to the root url so user
+      # can sign in.
+      redirect_to root_url
     end
+  end
+end
+```
 
 `index` アクションのコードの実行内容をまとめると、次のようになります。
 
 - メール API のエンドポイント (https://outlook.office.com) への接続を作成します。
 - 受信トレイのメッセージの URL に、次の特性を持つ GET 要求を発行します。
-	- [クエリ文字列](https://msdn.microsoft.com/office/office365/APi/complex-types-for-mail-contacts-calendar#UseODataqueryparameters) `?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20` を使用して、結果を `ReceivedDateTime` で並べ替えます。また、[`ReceivedDateTime`]、[`Subject`]、[`From`] の各フィールドのみを要求し、結果を最初の 20 個に制限します。
-	- `Authorization` ヘッダーを、Azure からのアクセス トークンを使用するように設定します。
-	- `Accept` ヘッダーを、JSON が必要とされていることを通知するように設定します。
-	- `X-AnchorMailbox`ヘッダーを、ユーザーの電子メール アドレスに設定します。このヘッダーの設定により、API エンドポイントが、API 呼び出しを適切なバックエンド メールボックス サーバーへ、より効率的にルーティングされます。
+    - [クエリ文字列](https://msdn.microsoft.com/office/office365/APi/complex-types-for-mail-contacts-calendar#UseODataqueryparameters) `?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20` を使用して、結果を `ReceivedDateTime` で並べ替えます。また、[`ReceivedDateTime`]、[`Subject`]、[`From`] の各フィールドのみを要求し、結果を最初の 20 個に制限します。
+    - `Authorization` ヘッダーを、Azure からのアクセス トークンを使用するように設定します。
+    - `Accept` ヘッダーを、JSON が必要とされていることを通知するように設定します。
+    - `X-AnchorMailbox`ヘッダーを、ユーザーの電子メール アドレスに設定します。このヘッダーの設定により、API エンドポイントが、API 呼び出しを適切なバックエンド メールボックス サーバーへ、より効率的にルーティングされます。
 - JSON として応答本体を解析し、`value` のハッシュを `@messages` 変数に割り当てます。この変数は、ビュー テンプレートで使用可能になります。
 
 ### 結果を表示する ###
 
-ここで、`@messages` 変数を使用するように、`index` アクションに関連するビュー テンプレートを変更する必要があります。`.\o365-tutorial\app\views\mail\index.html.erb` ファイルを開き、内容を次のように置き換えます。
+ここで、`index` 変数を使用するように、`@messages` アクションに関連するビュー テンプレートを変更する必要があります。`.\o365-tutorial\app\views\mail\index.html.erb` ファイルを開き、内容を次のように置き換えます。
 
 #### `.\o365-tutorial\app\views\mail\index.html.erb` ファイルのコンテンツ ####
 
-    <h1>My messages</h1>
-    <table>
-      <tr>
-	    <th>From</th>
-	    <th>Subject</th>
-	    <th>Received</th>
-      </tr>
-      <% @messages.each do |message| %>
-	    <tr>
-	      <td><%= message['From']['EmailAddress']['Name'] %></td>
-	      <td><%= message['Subject'] %></td>
-	      <td><%= message['ReceivedDateTime'] %></td>
-	    </tr>
-      <% end %>
-    </table>
+```erb
+<h1>My messages</h1>
+<table>
+  <tr>
+  <th>From</th>
+  <th>Subject</th>
+  <th>Received</th>
+  </tr>
+  <% @messages.each do |message| %>
+  <tr>
+    <td><%= message['From']['EmailAddress']['Name'] %></td>
+    <td><%= message['Subject'] %></td>
+    <td><%= message['ReceivedDateTime'] %></td>
+  </tr>
+  <% end %>
+</table>
+```
 
-テンプレートは、非常に単純な HTML テーブルです。埋め込まれた Ruby を使用して、`index` アクションで設定した `@messages` 変数の結果を反復処理し、メッセージごとにテーブル行を作成します。各メッセージの値にアクセスする構文は簡単です。メッセージの送信者の表示名を抽出する方法に注意してください。
+テンプレートは、非常に単純な HTML テーブルです。埋め込まれた Ruby を使用して、`@messages` アクションで設定した `index` 変数の結果を反復処理し、メッセージごとにテーブル行を作成します。各メッセージの値にアクセスする構文は簡単です。メッセージの送信者の表示名を抽出する方法に注意してください。
 
-    <%= message['From']['EmailAddress']['Name'] %>
+```erb
+<%= message['From']['EmailAddress']['Name'] %>
+```
 
 これにより、次の `From` 値の JSON 構造のミラー操作が実行されます。
 
-    "From": {
-      "@odata.type": "#Microsoft.OutlookServices.Recipient",
-      "EmailAddress": {
-	    "@odata.type": "#Microsoft.OutlookServices.EmailAddress",
-	    "Address": "jason@contoso.com",
-	    "Name": "Jason Johnston"
-      }
-    }
+```json
+"From": {
+  "@odata.type": "#Microsoft.OutlookServices.Recipient",
+  "EmailAddress": {
+  "@odata.type": "#Microsoft.OutlookServices.EmailAddress",
+  "Address": "jason@contoso.com",
+  "Name": "Jason Johnston"
+  }
+}
+```
 
 変更を保存し、アプリにサインインします。受信トレイに、簡単なメッセージのテーブルが表示されます。
 
@@ -417,4 +497,4 @@ Copyright (c) Microsoft. All rights reserved.
 ----------
 Twitter ([@JasonJohMSFT](https://twitter.com/JasonJohMSFT)) をぜひフォローしてください。
 
-[Exchange 開発ブログ](http://blogs.msdn.com/b/exchangedev/)をフォローする
+[Outlook/Exchange 開発ブログ](http://blogs.msdn.com/b/exchangedev/)をフォローする
