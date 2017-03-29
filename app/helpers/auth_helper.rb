@@ -10,9 +10,10 @@ module AuthHelper
   SCOPES = [ 'openid',
              'profile',
              'offline_access',
-             'https://outlook.office.com/mail.read',
-             'https://outlook.office.com/calendars.read',
-             'https://outlook.office.com/contacts.read' ]
+             'User.Read',
+             'Mail.Read',
+             'Calendars.Read',
+             'Contacts.Read' ]
 
   # Generates the login URL for the app.
   def get_login_url
