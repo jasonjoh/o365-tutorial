@@ -65,20 +65,13 @@ module AuthHelper
 
   # Gets the user's email from the /Me endpoint
   def get_user_email(access_token)
-    conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
-      # Outputs to the console
-      faraday.response :logger
-      # Uses the default Net::HTTP adapter
-      faraday.adapter  Faraday.default_adapter  
-    end
+    callback = Proc.new { |r| r.headers['Authorization'] = "Bearer #{access_token}"}
 
-    response = conn.get do |request|
-      # Get user's info from /Me
-      request.url 'api/v2.0/Me'
-      request.headers['Authorization'] = "Bearer #{access_token}"
-      request.headers['Accept'] = 'application/json'
-    end
+    graph = MicrosoftGraph.new(base_url: 'https://graph.microsoft.com/v1.0',
+                               cached_metadata_file: File.join(MicrosoftGraph::CACHED_METADATA_DIRECTORY, 'metadata_v1.0.xml'),
+                               &callback)
 
-    email = JSON.parse(response.body)['EmailAddress']
+    me = graph.me
+    email = me.mail
   end
 end

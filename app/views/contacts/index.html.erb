@@ -1,6 +1,6 @@
 <!-- Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE.txt in the project root for license information. -->
 <h1>My contacts</h1>
-<table>
+<table class="table">
   <tr>
     <th>First Name</th>
     <th>Last Name</th>
@@ -8,9 +8,9 @@
   </tr>
   <% @contacts.each do |contact| %>
     <tr>
-      <td><%= contact['GivenName'] %></td>
-      <td><%= contact['Surname'] %></td>
-      <td><%= contact['EmailAddresses'][0]['Address'] %></td>
+      <td><%= contact.given_name %></td>
+      <td><%= contact.surname %></td>
+      <td><%= contact.email_addresses[0].address %></td>
     </tr>
   <% end %>
 </table>

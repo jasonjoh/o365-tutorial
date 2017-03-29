@@ -1,6 +1,6 @@
 <!-- Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE.txt in the project root for license information. -->
 <h1>My messages</h1>
-<table>
+<table class="table">
   <tr>
     <th>From</th>
     <th>Subject</th>
@@ -8,9 +8,9 @@
   </tr>
   <% @messages.each do |message| %>
     <tr>
-      <td><%= message['From']['EmailAddress']['Name'] %></td>
-      <td><%= message['Subject'] %></td>
-      <td><%= message['ReceivedDateTime'] %></td>
+      <td><%= message.from.email_address.name %></td>
+      <td><%= message.subject %></td>
+      <td><%= message.received_date_time %></td>
     </tr>
   <% end %>
 </table>

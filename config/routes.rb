@@ -5,6 +5,6 @@ Rails.application.routes.draw do
 
   get 'mail/index'
 
-  root 'application#home'
+  root 'home#index'
   get 'authorize' => 'auth#gettoken'
 end

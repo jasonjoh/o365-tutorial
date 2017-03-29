@@ -19,6 +19,7 @@ gem 'coffee-rails', '~> 4.2'
 gem 'oauth2'
 gem 'activerecord-session_store'
 gem 'faraday'
+gem 'microsoft_graph'
 
 # Use jquery as the JavaScript library
 gem 'jquery-rails'
