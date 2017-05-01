@@ -1,8 +1,6 @@
 # Getting Started with the Outlook Mail API and Ruby on Rails #
 
-[日本 (日本語)](https://github.com/jasonjoh/o365-tutorial/blob/master/loc/readme-ja.md) (Japanese)
-
-This sample app is the result of following the tutorial at [https://dev.outlook.com/restapi/tutorial/ruby](https://dev.outlook.com/restapi/tutorial/ruby). If you follow that tutorial, you should come up with something fairly close to the code in this repository.
+This sample app is the result of following the tutorial at [https://docs.microsoft.com/en-us/outlook/rest/ruby-tutorial](https://docs.microsoft.com/en-us/outlook/rest/ruby-tutorial). If you follow that tutorial, you should come up with something fairly close to the code in this repository.
 
 > **NOTE:** Looking for the version of this tutorial that used the Outlook API directly instead of Microsoft Graph? Check out the `outlook-api` branch. Note that Microsoft recommends using the Microsoft Graph to access mail, calendar, and contacts. You should use the Outlook APIs directly (via https://outlook.office.com/api) only if you require a feature that is not available on the Graph endpoints.
 
