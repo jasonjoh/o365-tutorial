@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See full license at the bottom of this file.
+# Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE.txt in the project root for license information.
 class MailController < ApplicationController
 
   include AuthHelper
@@ -6,26 +6,19 @@ class MailController < ApplicationController
   def index
     token = get_access_token
     email = session[:user_email]
+
     if token
       # If a token is present in the session, get messages from the inbox
-      conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
-        # Outputs to the console
-        faraday.response :logger
-        # Uses the default Net::HTTP adapter
-        faraday.adapter  Faraday.default_adapter  
+      callback = Proc.new do |r| 
+        r.headers['Authorization'] = "Bearer #{token}"
+        r.headers['X-AnchorMailbox'] = email
       end
-      
-      response = conn.get do |request|
-        # Get messages from the inbox
-        # Sort by ReceivedDateTime in descending orderby
-        # Get the first 20 results
-        request.url '/api/v2.0/Me/MailFolders/Inbox/Messages?$orderby=ReceivedDateTime desc&$select=ReceivedDateTime,Subject,From&$top=20'
-        request.headers['Authorization'] = "Bearer #{token}"
-        request.headers['Accept'] = 'application/json'
-        request.headers['X-AnchorMailbox'] = email
-      end
-      
-      @messages = JSON.parse(response.body)['value']
+
+      graph = MicrosoftGraph.new(base_url: 'https://graph.microsoft.com/v1.0',
+                                 cached_metadata_file: File.join(MicrosoftGraph::CACHED_METADATA_DIRECTORY, 'metadata_v1.0.xml'),
+                                 &callback)
+
+      @messages = graph.me.mail_folders.find('inbox').messages.order_by('receivedDateTime desc')
     else
       # If no token, redirect to the root url so user
       # can sign in.
@@ -33,24 +26,3 @@ class MailController < ApplicationController
     end
   end
 end
-
-# MIT License: 
- 
-# Permission is hereby granted, free of charge, to any person obtaining 
-# a copy of this software and associated documentation files (the 
-# ""Software""), to deal in the Software without restriction, including 
-# without limitation the rights to use, copy, modify, merge, publish, 
-# distribute, sublicense, and/or sell copies of the Software, and to 
-# permit persons to whom the Software is furnished to do so, subject to 
-# the following conditions: 
- 
-# The above copyright notice and this permission notice shall be 
-# included in all copies or substantial portions of the Software. 
- 
-# THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND, 
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE 
-# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
-# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
-# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

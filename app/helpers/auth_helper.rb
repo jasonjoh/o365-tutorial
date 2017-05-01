@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See full license at the bottom of this file.
+# Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE.txt in the project root for license information.
 module AuthHelper
 
   # App's client ID. Register the app in Application Registration Portal to get this value.
@@ -8,10 +8,12 @@ module AuthHelper
   
   # Scopes required by the app
   SCOPES = [ 'openid',
+             'profile',
              'offline_access',
-             'https://outlook.office.com/mail.read',
-             'https://outlook.office.com/calendars.read',
-             'https://outlook.office.com/contacts.read' ]
+             'User.Read',
+             'Mail.Read',
+             'Calendars.Read',
+             'Contacts.Read' ]
 
   # Generates the login URL for the app.
   def get_login_url
@@ -63,41 +65,13 @@ module AuthHelper
 
   # Gets the user's email from the /Me endpoint
   def get_user_email(access_token)
-    conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
-      # Outputs to the console
-      faraday.response :logger
-      # Uses the default Net::HTTP adapter
-      faraday.adapter  Faraday.default_adapter  
-    end
+    callback = Proc.new { |r| r.headers['Authorization'] = "Bearer #{access_token}"}
 
-    response = conn.get do |request|
-      # Get user's info from /Me
-      request.url 'api/v2.0/Me'
-      request.headers['Authorization'] = "Bearer #{access_token}"
-      request.headers['Accept'] = 'application/json'
-    end
+    graph = MicrosoftGraph.new(base_url: 'https://graph.microsoft.com/v1.0',
+                               cached_metadata_file: File.join(MicrosoftGraph::CACHED_METADATA_DIRECTORY, 'metadata_v1.0.xml'),
+                               &callback)
 
-    email = JSON.parse(response.body)['EmailAddress']
+    me = graph.me
+    email = me.mail
   end
 end
-
-# MIT License: 
- 
-# Permission is hereby granted, free of charge, to any person obtaining 
-# a copy of this software and associated documentation files (the 
-# ""Software""), to deal in the Software without restriction, including 
-# without limitation the rights to use, copy, modify, merge, publish, 
-# distribute, sublicense, and/or sell copies of the Software, and to 
-# permit persons to whom the Software is furnished to do so, subject to 
-# the following conditions: 
- 
-# The above copyright notice and this permission notice shall be 
-# included in all copies or substantial portions of the Software. 
- 
-# THE SOFTWARE IS PROVIDED ""AS IS"", WITHOUT WARRANTY OF ANY KIND, 
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE 
-# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
-# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
-# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

@@ -1,3 +1,4 @@
+# Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE.txt in the project root for license information.
 class CalendarController < ApplicationController
 
   include AuthHelper
@@ -6,25 +7,17 @@ class CalendarController < ApplicationController
     token = get_access_token
     email = session[:user_email]
     if token
-      # If a token is present in the session, get messages from the inbox
-      conn = Faraday.new(:url => 'https://outlook.office.com') do |faraday|
-        # Outputs to the console
-        faraday.response :logger
-        # Uses the default Net::HTTP adapter
-        faraday.adapter  Faraday.default_adapter  
+      # If a token is present in the session, get events from the calendar
+      callback = Proc.new do |r| 
+        r.headers['Authorization'] = "Bearer #{token}"
+        r.headers['X-AnchorMailbox'] = email
       end
-      
-      response = conn.get do |request|
-        # Get events from the calendar
-        # Sort by Start in ascending orderby
-        # Get the first 10 results
-        request.url '/api/v2.0/Me/Events?$orderby=Start/DateTime asc&$select=Subject,Start,End&$top=10'
-        request.headers['Authorization'] = "Bearer #{token}"
-        request.headers['Accept'] = "application/json"
-        request.headers['X-AnchorMailbox'] = email
-      end
-      
-      @events = JSON.parse(response.body)['value']
+
+      graph = MicrosoftGraph.new(base_url: 'https://graph.microsoft.com/v1.0',
+                                 cached_metadata_file: File.join(MicrosoftGraph::CACHED_METADATA_DIRECTORY, 'metadata_v1.0.xml'),
+                                 &callback)
+
+      @events = graph.me.events.order_by('start/dateTime asc')
     else
       # If no token, redirect to the root url so user
       # can sign in.

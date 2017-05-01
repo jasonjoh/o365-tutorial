@@ -1,5 +1,6 @@
+<!-- Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE.txt in the project root for license information. -->
 <h1>My events</h1>
-<table>
+<table class="table">
   <tr>
     <th>Subject</th>
     <th>Start</th>
@@ -7,9 +8,9 @@
   </tr>
   <% @events.each do |event| %>
     <tr>
-      <td><%= event['Subject'] %></td>
-      <td><%= event['Start'] %></td>
-      <td><%= event['End'] %></td>
+      <td><%= event.subject %></td>
+      <td><%= event.start.date_time %></td>
+      <td><%= event.end.date_time %></td>
     </tr>
   <% end %>
 </table>
