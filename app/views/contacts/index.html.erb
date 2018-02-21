@@ -10,7 +10,7 @@
     <tr>
       <td><%= contact.given_name %></td>
       <td><%= contact.surname %></td>
-      <td><%= contact.email_addresses[0].address %></td>
+      <td><%= !contact.email_addresses[0].nil? ? contact.email_addresses[0].address : '' %></td>
     </tr>
   <% end %>
 </table>

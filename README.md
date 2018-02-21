@@ -13,7 +13,7 @@ If you didn't follow the tutorial and just want to download this repo and try it
 This guide assumes:
 
 - That you already have Ruby on Rails installed and working on your development machine. 
-- That you have an Office 365 tenant, with access to an account in that tenant **OR** an Outlook.com developer preview account.
+- That you have an Office 365 tenant, with access to an account in that tenant **OR** an Outlook.com account.
 
 ### Register the app
 
@@ -32,6 +32,15 @@ Here's what the details of your app registration should look like when you are d
 ![The completed registration properties.](readme-images/ruby-tutorial.PNG)
 
 Once this is complete you should have a client ID and a secret. Replace the `<YOUR APP ID HERE>` and `<YOUR APP PASSWORD HERE>` placeholders in [auth_helper.rb](app/helpers/auth_helper.rb) with these values and save your changes.
+
+### Install dependencies and initialize project
+
+From a command prompt/shell in the root of this project, run the following commands.
+
+```Shell
+bundle install
+rails db:migrate
+```
 
 ### Start the Rails server
 
