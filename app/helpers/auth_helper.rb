@@ -62,16 +62,4 @@ module AuthHelper
       access_token = token.token
     end
   end
-
-  # Gets the user's email from the /Me endpoint
-  def get_user_email(access_token)
-    callback = Proc.new { |r| r.headers['Authorization'] = "Bearer #{access_token}"}
-
-    graph = MicrosoftGraph.new(base_url: 'https://graph.microsoft.com/v1.0',
-                               cached_metadata_file: File.join(MicrosoftGraph::CACHED_METADATA_DIRECTORY, 'metadata_v1.0.xml'),
-                               &callback)
-
-    me = graph.me
-    email = me.mail
-  end
 end

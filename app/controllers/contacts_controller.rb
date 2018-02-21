@@ -5,12 +5,10 @@ class ContactsController < ApplicationController
   
   def index
     token = get_access_token
-    email = session[:user_email]
     if token
       # If a token is present in the session, get contacts
       callback = Proc.new do |r| 
         r.headers['Authorization'] = "Bearer #{token}"
-        r.headers['X-AnchorMailbox'] = email
       end
 
       graph = MicrosoftGraph.new(base_url: 'https://graph.microsoft.com/v1.0',
