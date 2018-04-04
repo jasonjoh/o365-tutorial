@@ -6,7 +6,7 @@ This sample app is the result of following the tutorial at [https://docs.microso
 
 ## Running the sample
 
-If you didn't follow the tutorial and just want to download this repo and try it out, you need to do a few things first.
+If you didn't follow the tutorial and just want to download this repository and try it out, you need to do a few things first.
 
 ### Setup your dev environment
 
