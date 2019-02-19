@@ -1,8 +1,8 @@
 # <a name="getting-started-with-the-outlook-mail-api-and-ruby-on-rails"></a>Outlook メール API と Ruby on Rails の使用を開始する #
 
-このサンプル アプリは [https://docs.microsoft.com/ja-jp/outlook/rest/ruby-tutorial](https://docs.microsoft.com/en-us/outlook/rest/ruby-tutorial) のチュートリアルの結果を示します。 このチュートリアルを実行すると、このリポジトリ内のコードに非常に近い結果が得られるはずです。
+このサンプル アプリは、次のチュートリアルの結果です。[https://docs.microsoft.com/ja-jp/outlook/rest/ruby-tutorial](https://docs.microsoft.com/ja-jp/outlook/rest/ruby-tutorial)。 このチュートリアルを実行すると、このリポジトリ内のコードに非常に近い結果が得られるはずです。
 
-> **注:** Microsoft Graph ではなく、Outlook API を直接使用するチュートリアル バージョンをお探しの場合は、 `outlook-api` ブランチをご覧ください。 Microsoft は、メール、予定表、連絡先へのアクセスに Microsoft Graph を使用することをお勧めしています。 Graph エンドポイントで利用できない機能が必要な場合にのみ、Outlook API を直接 (https://outlook.office.com/api から) 使用してください。
+> **注:** Microsoft Graph ではなく、Outlook API を直接使用するチュートリアル バージョンをお探しの場合は、 `outlook-api` ブランチをご覧ください。 Microsoft は、メール、予定表、連絡先へのアクセスに Microsoft Graph を使用することをお勧めしています。 Graph エンドポイントで利用できない機能が必要な場合のみ、Outlook API を直接 (https://outlook.office.com/api) から) 使用します。
 
 ## <a name="running-the-sample"></a>サンプルの実行
 
@@ -17,7 +17,7 @@
 
 ### <a name="register-the-app"></a>アプリを登録する
 
-クライアント ID とシークレットを素早く取得するには、https://apps.dev.microsoft.com にアクセスします。サインインのボタンを使用し、Microsoft アカウント (Outlook.com) か職場または学校アカウント (Office 365) のいずれかを使用してサインインします。
+クライアント ID とシークレットをすばやく取得するには、https://apps.dev.microsoft.com にアクセスします。サインインのボタンを使用し、Microsoft アカウント (Outlook.com) か職場または学校のアカウント (Office 365) のいずれかを使用してサインインします。
 
 ![アプリケーション登録ポータル サインイン ページ](readme-images/sign-in.PNG)
 
@@ -52,9 +52,9 @@ rails server
 
 [http://localhost:3000](http://localhost:3000) を参照します。
 
-## <a name="copyright"></a>Copyright ##
+## <a name="copyright"></a>著作権 ##
 
-Copyright (c) Microsoft.All rights reserved.
+Copyright (c) Microsoft. All rights reserved.
 
 ----------
 Twitter ([@JasonJohMSFT](https://twitter.com/JasonJohMSFT)) をぜひフォローしてください。
